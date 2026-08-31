@@ -1,0 +1,17 @@
+{
+  "name": "IBK KIDS — Sistema de Escalas",
+  "short_name": "IBK Escalas",
+  "description": "Escala de professores e substitutos das aulas da IBK KIDS, com sorteio de rodízio.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FBFAF6",
+  "theme_color": "#B45F06",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
