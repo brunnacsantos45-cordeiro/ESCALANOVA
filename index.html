@@ -342,12 +342,12 @@
         <option value="A Realizar">A Realizar</option>
       </select>
     </div>
-    <p class="note">Status, dia da semana e tipo (GG/PG) são calculados automaticamente pela data. Edite os campos direto na tabela. Para <strong>travar</strong> uma aula já combinada, cadastre-a antes (botão "+ Adicionar aula manualmente") — o sorteio pula datas que já existem na escala. A coluna <strong>Status</strong> vem no automático (calculado pela data), mas você pode marcar manualmente "Realizada" ou "A Realizar" — útil quando a aula foi cancelada ou aconteceu fora do previsto.</p>
+    <p class="note">Edite os campos direto na tabela. Para <strong>travar</strong> uma aula já combinada, cadastre-a antes (botão "+ Adicionar aula manualmente") — o sorteio pula datas que já existem na escala. A coluna <strong>Status</strong> vem no automático (calculado pela data), mas você pode marcar manualmente "Realizada" ou "A Realizar" — útil quando a aula foi cancelada ou aconteceu fora do previsto. Dia da semana, tipo (GG/PG), tema/lição e observações não aparecem mais aqui — edite-os na aba <strong>Aulas a Realizar</strong>.</p>
     <div id="mensalTableWrap"></div>
   </div>
 
   <div class="panel" id="panel-arealizar">
-    <p class="note">Gerado automaticamente a partir da Escala Mensal (aulas com data igual ou posterior a hoje). Para editar, use a aba Escala Mensal.</p>
+    <p class="note">Lista gerada a partir da Escala Mensal (aulas com data igual ou posterior a hoje). <strong>Tipo, Tema/Lição e Observações são editáveis direto aqui</strong> — Classe, Data, Titular e Substituto continuam vindo da aba Escala Mensal. O <strong>Dia</strong> é calculado a partir da Data e muda automaticamente se ela for alterada.</p>
     <div id="arealizarTableWrap"></div>
   </div>
 
@@ -497,13 +497,23 @@ function diaSemana(iso){
   return DIAS[parseISO(iso).getDay()];
 }
 
-function tipoOf(row){
+function tipoAutomatico(row){
   if(!row.data || !row.classe) return '';
   const dow = parseISO(row.data).getDay();
   if(row.classe === 'Classe 2-5' && dow === 3) return 'GG';
   if(row.classe === 'Classe 2-5' && dow === 0) return 'PG';
   if(row.classe === 'Classe 6-11' && dow === 0) return 'GG';
   return 'Verificar';
+}
+
+function tipoOf(row){
+  // O tipo manual, quando preenchido, tem prioridade sobre o cálculo automático.
+  if(row.tipoManual === 'GG' || row.tipoManual === 'PG') return row.tipoManual;
+  return tipoAutomatico(row);
+}
+
+function tipoEhManual(row){
+  return row.tipoManual === 'GG' || row.tipoManual === 'PG';
 }
 
 function fmtDate(iso){
@@ -668,12 +678,12 @@ function renderMensal(){
   filtered.sort((a,b) => (a.r.data||'').localeCompare(b.r.data||''));
 
   let html = `<table class="mensal"><thead><tr>
-    <th>Classe</th><th>Data</th><th>Dia</th><th>Tipo</th><th>EBD</th><th>Titular</th><th>Substituto</th>
-    <th>Ajudante</th><th>Tema / Lição</th><th>Enviada</th><th>Observações</th><th>Status</th><th></th>
+    <th>Classe</th><th>Data</th><th>EBD</th><th>Titular</th><th>Substituto</th>
+    <th>Ajudante</th><th>Enviada</th><th>Status</th><th></th>
   </tr></thead><tbody>`;
 
   if(filtered.length===0){
-    html += `<tr><td colspan="13" class="empty">${filtroMes==='todos'
+    html += `<tr><td colspan="9" class="empty">${filtroMes==='todos'
       ? 'Nenhuma aula encontrada com esse filtro.'
       : 'Nenhuma aula em ' + rotuloMes(filtroMes) + '. Gere o rodízio desse mês acima, ou escolha “Todos os meses”.'}</td></tr>`;
   }
@@ -688,8 +698,6 @@ function renderMensal(){
         <option value="Classe 6-11" ${r.classe==='Classe 6-11'?'selected':''}>Classe 6-11</option>
       </select></td>
       <td><input type="date" value="${r.data||''}" onchange="updateFieldAndRerender(${i},'data',this.value)"></td>
-      <td>${escHtml(capitalize(diaSemana(r.data)))}</td>
-      <td>${escHtml(tipoOf(r))}</td>
       <td>${ehDomingo(r.data)
         ? `<select onchange="setDominical('${r.data}','ebd',this.value)" title="EBD é turma única: o nome vale para as duas classes.">${teacherOptions(dominicalDe(r.data).ebd, todasProfessoras())}</select>`
         : '<span class="semvaga">—</span>'}</td>
@@ -698,9 +706,7 @@ function renderMensal(){
       <td>${ehDomingo(r.data)
         ? `<select onchange="setDominical('${r.data}','ajudante',this.value)" title="Um ajudante por domingo, cobrindo as duas classes.">${teacherOptions(dominicalDe(r.data).ajudante, ajudantesAtivos())}</select>`
         : '<span class="semvaga">—</span>'}</td>
-      <td><input type="text" value="${escAttr(r.tema)}" oninput="updateField(${i},'tema',this.value)" onblur="renderAll()" placeholder="Ex: GG Semana 1"></td>
       <td style="text-align:center"><input type="checkbox" class="chkenv" ${r.enviada?'checked':''} onchange="updateFieldAndRerender(${i},'enviada',this.checked)" title="Marque quando a aula já tiver sido enviada à professora."></td>
-      <td><input type="text" value="${escAttr(r.obs)}" oninput="updateField(${i},'obs',this.value)" onblur="renderAll()"></td>
       <td>
         <select class="statusSel" onchange="updateFieldAndRerender(${i},'statusManual',this.value)" title="Automático segue a data; escolha manualmente para marcar a aula como realizada ou não.">
           <option value="" ${!statusEhManual(r)?'selected':''}>Automático (${st})</option>
@@ -722,22 +728,34 @@ function capitalize(s){
 }
 
 function renderArealizar(){
-  const rows = state.escala.filter(r => statusOf(r)==='A Realizar').slice().sort((a,b)=>a.data.localeCompare(b.data));
+  const rowsWithIdx = state.escala
+    .map((r,i) => ({r,i}))
+    .filter(({r}) => statusOf(r)==='A Realizar')
+    .sort((a,b) => (a.r.data||'').localeCompare(b.r.data||''));
   let html = `<table class="arealizar"><thead><tr>
     <th>Classe</th><th>Data</th><th>Dia</th><th>Tipo</th><th>Titular</th><th>Substituto</th><th>Tema / Lição</th><th>Observações</th>
   </tr></thead><tbody>`;
-  if(rows.length===0){
+  if(rowsWithIdx.length===0){
     html += `<tr><td colspan="8" class="empty">Nenhuma aula pendente.</td></tr>`;
   }
-  rows.forEach(r => {
+  rowsWithIdx.forEach(({r,i}) => {
     html += `<tr>
-      <td>${escHtml(r.classe)}</td><td>${fmtDate(r.data)}</td><td>${escHtml(capitalize(diaSemana(r.data)))}</td>
-      <td>${escHtml(tipoOf(r))}</td><td>${escHtml(r.titular)}</td><td>${escHtml(r.substituto)}</td>
-      <td>${escHtml(r.tema)||'<span class="note" style="margin:0">a definir</span>'}</td><td>${escHtml(r.obs)}</td>
+      <td>${escHtml(r.classe)}</td><td>${fmtDate(r.data)}</td>
+      <td title="Calculado a partir da data — altere a data para mudar o dia.">${escHtml(capitalize(diaSemana(r.data)))}</td>
+      <td>
+        <select class="statusSel" onchange="updateFieldAndRerender(${i},'tipoManual',this.value)" title="Automático segue data e classe; escolha manualmente em casos especiais.">
+          <option value="" ${!tipoEhManual(r)?'selected':''}>Automático (${tipoAutomatico(r)})</option>
+          <option value="GG" ${r.tipoManual==='GG'?'selected':''}>GG</option>
+          <option value="PG" ${r.tipoManual==='PG'?'selected':''}>PG</option>
+        </select>
+      </td>
+      <td>${escHtml(r.titular)}</td><td>${escHtml(r.substituto)}</td>
+      <td><input type="text" value="${escAttr(r.tema)}" placeholder="a definir" oninput="updateField(${i},'tema',this.value)" onblur="renderAll()"></td>
+      <td><input type="text" value="${escAttr(r.obs)}" oninput="updateField(${i},'obs',this.value)" onblur="renderAll()"></td>
     </tr>`;
   });
   html += `</tbody></table>`;
-  document.getElementById('arealizarTableWrap').innerHTML = '<p class="swipehint">Arraste a tabela para o lado para ver todas as colunas.</p><div class="tablescroll">' + html + '</div>';
+  document.getElementById('arealizarTableWrap').innerHTML = '<p class="swipehint">Arraste a tabela para o lado para ver todas as colunas. Tema/Lição e Observações são editáveis direto na tabela.</p><div class="tablescroll">' + html + '</div>';
 }
 
 function renderRealizadas(){
