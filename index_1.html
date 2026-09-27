@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>IBK KIDS — Sistema de Escalas</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#B45F06">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IBK Escalas">
+<link rel="apple-touch-icon" href="icone-192.png">
+<link rel="icon" href="icone-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --orange-l:#FCE5CD; --orange-d:#B45F06;
+    --blue-l:#CFE2F3; --blue-d:#0B5394;
+    --green-l:#D9EAD3; --green-d:#274E13;
+    --yellow-l:#FFF2CC; --yellow-d:#7F6000;
+    --ink:#33322E; --muted:#75736B; --line:#E3E0D6; --page:#FBFAF6; --card:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:var(--ink);background:var(--page);}
+
+  /* ---------- Menu lateral (sidebar) ---------- */
+  :root{ --sidebar-w:236px; }
+  .sidebar{
+    position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;
+    background:var(--card);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;padding:18px 0;z-index:40;
+    transition:transform .22s ease;
+  }
+  .sidebar-brand{padding:4px 20px 16px;border-bottom:1px solid var(--line);margin-bottom:8px;}
+  .sidebar-brand strong{display:block;font-size:16px;color:var(--orange-d);}
+  .sidebar-brand span{display:block;font-size:12px;color:var(--muted);margin-top:2px;}
+  .sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:6px 10px;overflow-y:auto;}
+  .sidebar-nav .tab{
+    display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;
+    border-bottom:none;margin-bottom:0;font-size:14px;
+  }
+  .sidebar-nav .tab svg{width:18px;height:18px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.8;}
+  .sidebar-nav .tab:hover{background:var(--page);}
+  .sidebar-nav .tab.active{background:var(--orange-l);color:var(--orange-d);border-bottom:none;}
+  .menu-toggle{
+    display:none;position:fixed;top:14px;left:14px;z-index:50;width:42px;height:42px;
+    align-items:center;justify-content:center;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;cursor:pointer;
+  }
+  .menu-toggle svg{width:20px;height:20px;stroke:var(--ink);}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(30,28,20,.35);z-index:35;}
+  .main{margin-left:var(--sidebar-w);max-width:1180px;padding:24px 28px 60px;}
+  @media (max-width:900px){
+    .sidebar{transform:translateX(-100%);box-shadow:8px 0 28px rgba(0,0,0,.18);}
+    .sidebar.open{transform:translateX(0);}
+    .sidebar-overlay.open{display:block;}
+    .menu-toggle{display:flex;}
+    .main{margin-left:0;padding:70px 16px 80px;}
+  }
+
+  header.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
+  header.top h1{font-size:22px;margin:0 0 4px;color:var(--orange-d);}
+  header.top p{margin:0;color:var(--muted);font-size:13px;}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;}
+  button{font-family:inherit;font-size:13px;border-radius:8px;border:1px solid var(--line);background:var(--card);padding:8px 14px;cursor:pointer;color:var(--ink);}
+  button:hover{border-color:var(--orange-d);color:var(--orange-d);}
+  button.primary{background:var(--blue-d);color:#fff;border-color:var(--blue-d);}
+  button.primary:hover{opacity:0.9;color:#fff;}
+  button.danger{color:#a33;}
+  input[type=file]{display:none;}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
+  .card .lbl{font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .card .val{font-size:22px;font-weight:600;}
+  .card .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .tab{font-size:13px;cursor:pointer;color:var(--muted);}
+  .tab.active{color:var(--orange-d);font-weight:600;}
+  .syncpill{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
+    border-radius:20px;padding:6px 12px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap;}
+  .syncpill:hover{border-color:var(--blue-d);color:var(--blue-d);}
+  .syncpill .dot{width:8px;height:8px;border-radius:50%;background:#c9c6ba;flex:0 0 auto;}
+  .syncpill .dot.ok{background:var(--green-d);}
+  .syncpill .dot.erro{background:#a33;}
+  .weekrow{display:flex;align-items:center;gap:14px;padding:12px 6px;border-bottom:1px solid var(--line);}
+  .weekrow:last-child{border-bottom:none;}
+  .weekrow-date{width:96px;flex:0 0 auto;font-size:12px;color:var(--muted);line-height:1.4;}
+  .weekrow-date strong{display:block;font-size:14px;color:var(--ink);}
+  .weekrow-info{flex:1 1 auto;min-width:0;}
+  .weekrow-classe{font-size:11px;color:var(--blue-d);font-weight:600;text-transform:uppercase;letter-spacing:.02em;}
+  .weekrow-nomes{font-size:13px;margin-top:2px;}
+  .weekrow-tema{font-size:12px;color:var(--muted);margin-top:2px;}
+  @media (max-width:600px){
+    .weekrow{flex-wrap:wrap;}
+    .weekrow-date{width:auto;}
+  }
+  .statusSel{font-size:11px;padding:3px 5px;border-radius:6px;border:1px solid var(--line);background:#fff;max-width:130px;}
+  /* ---------- Folha de impressão no layout KOINONIA ---------- */
+  #printArea{display:none;}
+  #printArea .folha{page-break-after:always;}
+  #printArea .folha:last-child{page-break-after:auto;}
+  #printArea .faixa{position:relative;border:0.5pt solid #000;background:#fce5cd;height:61pt;margin-bottom:20pt;}
+  #printArea .faixa img{position:absolute;top:3pt;width:79pt;height:56pt;object-fit:contain;}
+  #printArea .faixa img.esq{left:10pt;}
+  #printArea .faixa img.dir{right:10pt;}
+  #printArea .faixa h1{margin:0;line-height:61pt;text-align:center;font-family:Georgia,'Times New Roman',serif;
+    font-size:18.5pt;font-weight:bold;color:#ff9900;letter-spacing:0.3pt;}
+  #printArea .quadro{border:0.5pt solid #000;}
+  #printArea .clstitulo{background:#fff9f3;text-align:center;font-family:Verdana,Geneva,sans-serif;
+    font-size:16.4pt;font-weight:bold;color:#f09300;padding:9pt 0;}
+  #printArea table{width:100%;border-collapse:collapse;table-layout:fixed;}
+  #printArea th{background:#fff9f3;border:0.4pt solid #ccc;border-left:none;border-right:none;
+    font-family:Georgia,'Times New Roman',serif;font-size:12.1pt;font-weight:bold;color:#000;height:38pt;}
+  #printArea td{border:0.4pt solid #ccc;text-align:center;height:31pt;
+    font-family:Georgia,'Times New Roman',serif;font-size:12.1pt;color:#000;}
+  #printArea td.tit{font-weight:bold;}
+  #printArea td.ebd{font-size:9.5pt;font-weight:bold;color:#974706;}
+  #printArea .nome{font-weight:bold;color:#974706;display:block;line-height:1.15;}
+  #printArea .sub{display:block;line-height:1.15;}
+  @media print{
+    @page{size:A4 portrait;margin:19mm 19mm 14mm;}
+    body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    body.printing .main{display:none !important;}
+    body.printing .sidebar,body.printing .menu-toggle{display:none !important;}
+    body.printing #printArea{display:block !important;}
+    #printArea tr{break-inside:avoid;}
+  }
+  .chartmsg{display:flex;align-items:center;justify-content:center;height:100%;margin:0;padding:16px;text-align:center;font-size:13px;color:var(--muted);line-height:1.5;}
+  .semvaga{color:var(--muted);}
+  .chkenv{width:18px;height:18px;accent-color:var(--green-d);cursor:pointer;}
+  .ajudlista{display:flex;flex-wrap:wrap;gap:8px;}
+  .ajudchip{display:inline-flex;align-items:center;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:2px 4px 2px 10px;}
+  .ajudchip input{border:none;background:transparent;font-size:13px;width:110px;outline:none;}
+  .syncbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;}
+  .syncbox h3{margin:0 0 6px;font-size:15px;color:var(--blue-d);}
+  .syncform{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;}
+  .syncform label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);}
+  .syncform input,.syncform select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;}
+  .syncactions{display:flex;flex-wrap:wrap;gap:8px;}
+  .syncstatus{margin:12px 0 0;font-size:13px;padding:8px 10px;border-radius:8px;background:#F3F1EA;}
+  .syncstatus.ok{background:#E8F0E4;color:#274E13;}
+  .syncstatus.erro{background:#F7E7E3;color:#8B2E14;}
+  /* Celular deitado: sobra largura e falta altura, então o topo encolhe. */
+  @media (max-width:960px) and (orientation:landscape){
+    .main{padding:10px 14px 60px;}
+    header.top{margin-bottom:10px;}
+    header.top h1{font-size:17px;}
+    .cards{grid-template-columns:repeat(4,1fr);gap:8px;}
+    .nextcard{grid-column:auto;}
+    .card{padding:8px 10px;}
+    .card .val{font-size:17px;}
+    .tab{padding:8px 12px;font-size:13px;}
+    .chartwrap{height:200px;}
+    .swipehint{display:none;}
+  }
+  @media (max-width:720px){ .syncform{grid-template-columns:1fr;} .syncactions button{flex:1 1 46%;} }
+  .panel{display:none;}
+  .tablescroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;}
+  .tablescroll table{min-width:820px;}
+  @media (max-width:720px){
+    .main{padding:74px 12px 80px;}
+    header.top h1{font-size:19px;}
+    header.top{gap:10px;}
+    .actions{width:100%;}
+    .actions button{flex:1 1 auto;padding:10px 12px;}
+    .cards{grid-template-columns:1fr 1fr;gap:8px;}
+    .nextcard{grid-column:1 / -1;}
+    .card .val{font-size:19px;}
+    .genbar{flex-direction:column;align-items:stretch;}
+    .genbar select,.genbar input,.genbar button{width:100%;}
+    .toolbar select{flex:1 1 140px;}
+    .grid2{grid-template-columns:1fr;}
+    /* alvos de toque maiores no celular */
+    table input,table select{min-height:34px;font-size:13px;}
+    button{min-height:38px;}
+    .swipehint{display:block;}
+  }
+  .swipehint{display:none;font-size:11px;color:var(--muted);margin:0 0 6px;}
+  .panel.active{display:block;}
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .toolbar select, .toolbar input{font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;}
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;font-size:13px;}
+  thead th{text-align:left;padding:9px 8px;background:var(--faint,#f5f3ec);color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tbody tr:hover{background:#fafaf6;}
+  table.mensal thead th{background:var(--blue-l);color:var(--blue-d);}
+  table.arealizar thead th{background:var(--yellow-l);color:var(--yellow-d);}
+  table.realizadas thead th{background:var(--green-l);color:var(--green-d);}
+  table.prof thead th{background:var(--orange-l);color:var(--orange-d);}
+  td select, td input{width:100%;font-size:13px;padding:5px 6px;border-radius:6px;border:1px solid var(--line);background:#fff;}
+  td input[type=number]{width:70px;}
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:600;}
+  .badge.real{background:var(--green-l);color:var(--green-d);}
+  .badge.pend{background:var(--yellow-l);color:var(--yellow-d);}
+  .iconbtn{border:none;background:none;color:#a33;cursor:pointer;font-size:15px;padding:2px 6px;}
+  .iconbtn:hover{color:#711;}
+  .empty{color:var(--muted);font-size:13px;padding:16px;text-align:center;}
+  .note{font-size:12px;color:var(--muted);margin:6px 0 14px;}
+  .chartbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:20px;}
+  .chartbox h3{font-size:14px;margin:0 0 12px;color:var(--ink);}
+  .chartwrap{position:relative;height:240px;}
+  .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;}
+  @media (max-width:760px){.grid2{grid-template-columns:1fr;}}
+  .nextcard{background:linear-gradient(0deg,var(--blue-l),var(--blue-l));border:1px solid var(--blue-d);border-radius:12px;padding:16px 18px;margin-bottom:20px;}
+  .nextcard .tag{font-size:12px;color:var(--blue-d);font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+  .nextcard .main{font-size:18px;font-weight:600;margin:4px 0 2px;}
+  .nextcard .info{font-size:13px;color:var(--ink);}
+  .genbar{display:flex;gap:10px;align-items:center;background:var(--orange-l);border-radius:10px;padding:10px 14px;margin-bottom:16px;flex-wrap:wrap;}
+  .genbar span{font-size:13px;color:var(--orange-d);}
+  .previewbox{border:1.5px dashed var(--orange-d);border-radius:10px;padding:14px 16px;margin-bottom:16px;background:#fffdf8;}
+  .previewbox h4{margin:0 0 4px;font-size:14px;color:var(--orange-d);}
+  .previewbox .previewnote{font-size:12px;color:var(--muted);margin:0 0 10px;}
+  .previewbox .previewactions{display:flex;gap:8px;margin-top:12px;}
+  .previewgroup{margin-bottom:14px;}
+  .previewgroup h5{font-size:13px;margin:0 0 6px;color:var(--ink);}
+</style>
+</head>
+<body>
+
+<button class="menu-toggle" id="menuToggle" aria-label="Abrir menu" onclick="toggleSidebar()">
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand"><strong>IBK KIDS</strong><span>Sistema de Escalas</span></div>
+  <div class="sidebar-nav">
+    <div class="tab active" data-tab="dashboard">
+      <svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"/></svg>
+      Início
+    </div>
+    <div class="tab" data-tab="mensal">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+      Escala Mensal
+    </div>
+    <div class="tab" data-tab="arealizar">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      Aulas a Realizar
+    </div>
+    <div class="tab" data-tab="realizadas">
+      <svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>
+      Aulas Realizadas
+    </div>
+    <div class="tab" data-tab="prof">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="8" r="2.5"/><path d="M16 14.6c2.6.5 4 2.2 4 5.4"/></svg>
+      Professores
+    </div>
+    <div class="tab" data-tab="visao">
+      <svg viewBox="0 0 24 24"><line x1="5" y1="20" x2="5" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="14"/></svg>
+      Visão Geral
+    </div>
+    <div class="tab" data-tab="sync">
+      <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 01-15.3 6.4M3 12a9 9 0 0115.3-6.4"/><polyline points="21 3 21 9 15 9"/><polyline points="3 21 3 15 9 15"/></svg>
+      Sincronização
+    </div>
+  </div>
+</nav>
+
+<div class="main" id="mainContent">
+
+  <header class="top">
+    <div>
+      <h1>IBK KIDS — Sistema de Escalas</h1>
+      <p>Painel de gerenciamento de aulas e professores · hoje é <span id="todayLabel"></span></p>
+      <p style="margin-top:2px;font-size:12px;color:var(--muted)" id="saveState">Carregando…</p>
+    </div>
+    <div class="actions">
+      <div class="syncpill" id="syncPill" onclick="irParaAba('sync')" title="Ver detalhes da sincronização">
+        <span class="dot" id="syncDot"></span>
+        <span id="syncPillText">Carregando…</span>
+      </div>
+      <button onclick="sincronizarAgoraHeader()" title="Buscar/enviar agora">↻ Sincronizar</button>
+      <button onclick="exportJSON()">Exportar backup</button>
+      <button onclick="document.getElementById('importInput').click()">Importar backup</button>
+      <input type="file" id="importInput" accept="application/json">
+      <button onclick="window.print()">Imprimir</button>
+      <button class="danger" onclick="limparDados()">Zerar dados</button>
+    </div>
+  </header>
+
+  <div class="panel active" id="panel-dashboard">
+    <div class="cards" id="cardsRow"></div>
+    <div class="chartbox" style="margin-top:0">
+      <h3>Aulas desta semana</h3>
+      <div id="semanaListWrap"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-mensal">
+    <div class="genbar">
+      <span>Sortear escala de professores e substitutos:</span>
+      <input type="month" id="genMonth">
+      <select id="genClasse">
+        <option value="">Ambas as classes</option>
+        <option value="Classe 2-5">Somente Classe 2-5</option>
+        <option value="Classe 6-11">Somente Classe 6-11</option>
+      </select>
+      <button class="primary" onclick="previewGenerate()">Gerar rodízio (pré-visualizar)</button>
+      <button onclick="addRow()">+ Adicionar aula manualmente</button>
+    </div>
+    <div id="genPreviewWrap"></div>
+    <div class="toolbar" style="border-top:1px dashed var(--line);padding-top:12px">
+      <span style="font-size:13px">Escala para enviar aos professores:</span>
+      <input type="month" id="pdfMonth">
+      <button class="primary" onclick="gerarPDF()">Baixar PDF do mês</button>
+      <span class="note" style="margin:0">Abre a impressão — escolha <strong>Salvar como PDF</strong>.</span>
+    </div>
+    <div class="toolbar">
+      <select id="filtroMesMensal" onchange="filtroMes = this.value; renderMensal()"></select>
+      <select id="filtroClasseMensal" onchange="renderMensal()">
+        <option value="">Todas as classes</option>
+        <option value="Classe 2-5">Classe 2-5</option>
+        <option value="Classe 6-11">Classe 6-11</option>
+      </select>
+      <select id="filtroStatusMensal" onchange="renderMensal()">
+        <option value="">Todos os status</option>
+        <option value="Realizada">Realizada</option>
+        <option value="A Realizar">A Realizar</option>
+      </select>
+    </div>
+    <p class="note">Status, dia da semana e tipo (GG/PG) são calculados automaticamente pela data. Edite os campos direto na tabela. Para <strong>travar</strong> uma aula já combinada, cadastre-a antes (botão "+ Adicionar aula manualmente") — o sorteio pula datas que já existem na escala. A coluna <strong>Status</strong> vem no automático (calculado pela data), mas você pode marcar manualmente "Realizada" ou "A Realizar" — útil quando a aula foi cancelada ou aconteceu fora do previsto.</p>
+    <div id="mensalTableWrap"></div>
+  </div>
+
+  <div class="panel" id="panel-arealizar">
+    <p class="note">Gerado automaticamente a partir da Escala Mensal (aulas com data igual ou posterior a hoje). Para editar, use a aba Escala Mensal.</p>
+    <div id="arealizarTableWrap"></div>
+  </div>
+
+  <div class="panel" id="panel-realizadas">
+    <p class="note">Gerado automaticamente a partir da Escala Mensal (aulas com data anterior a hoje). Para editar, use a aba Escala Mensal.</p>
+    <div id="realizadasTableWrap"></div>
+  </div>
+
+  <div class="panel" id="panel-prof">
+    <div class="toolbar">
+      <button onclick="addProfessor()">+ Adicionar professor</button>
+    </div>
+    <div id="profTableWrap"></div>
+  </div>
+
+  <div class="panel" id="panel-visao">
+    <div class="grid2">
+      <div class="chartbox">
+        <h3>Aulas dadas por professor (titular) — checagem de rodízio</h3>
+        <div class="chartwrap" id="wrapProf"><canvas id="chartProf"></canvas></div>
+      </div>
+      <div class="chartbox">
+        <h3>Aulas por classe</h3>
+        <div class="chartwrap" id="wrapClasse"><canvas id="chartClasse"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-sync">
+    <div class="syncbox">
+      <h3>Sincronizar entre celulares e computadores</h3>
+      <p class="note">Sem sincronização, cada aparelho guarda a sua própria cópia. Conectando um serviço online, tudo o que você alterar aparece nos outros aparelhos em poucos segundos. Escolha o método e siga o guia <strong>COMO-SINCRONIZAR</strong> para pegar os códigos.</p>
+      <div class="syncform" style="grid-template-columns:1fr">
+        <label>Método
+          <select id="syncMetodo" onchange="syncTrocarMetodo()">
+            <option value="drive">Google Drive — só eu, em vários aparelhos</option>
+            <option value="supabase">Banco compartilhado — várias pessoas editando</option>
+          </select>
+        </label>
+      </div>
+      <div class="syncform" id="camposDrive">
+        <label style="grid-column:1 / -1">ID do cliente do Google (Client ID)
+          <input type="text" id="syncClientId" placeholder="000000000000-xxxxxxxx.apps.googleusercontent.com" autocomplete="off">
+        </label>
+      </div>
+      <div class="syncform" id="camposSupabase" style="display:none">
+        <label>Endereço do projeto (Project URL)
+          <input type="text" id="syncUrl" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off">
+        </label>
+        <label>Chave pública (anon public)
+          <input type="password" id="syncKey" placeholder="cole aqui a chave anon" autocomplete="off">
+        </label>
+        <label>Nome do grupo
+          <input type="text" id="syncSala" placeholder="ibk-kids" autocomplete="off">
+        </label>
+      </div>
+      <div class="syncactions">
+        <button class="primary" onclick="syncConectar()">Conectar</button>
+        <button id="btnEntrarGoogle" onclick="driveEntrar(false)">Entrar com Google</button>
+        <button onclick="syncPuxarAgora()">Buscar dados do servidor</button>
+        <button onclick="syncEnviarAgora()">Enviar meus dados agora</button>
+        <button class="danger" onclick="syncDesconectar()">Desconectar</button>
+      </div>
+      <p id="syncStatus" class="syncstatus">Não conectado — os dados estão só neste aparelho.</p>
+      <p class="note" style="margin-top:12px"><strong>Google Drive:</strong> o arquivo fica na sua conta e o app só enxerga o arquivo que ele mesmo criou. O login do Google vale cerca de uma hora — depois disso, toque em "Entrar com Google" novamente. Só funciona com o app publicado na internet (https), não abrindo o arquivo direto do aparelho.<br><strong>Banco compartilhado:</strong> não pede login, mas quem tiver o endereço e a chave consegue ver e editar a escala.</p>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+const professoresIniciais = [
+  {classe:"Classe 2-5", nome:"Lara", ativo:true, soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:""},
+  {classe:"Classe 2-5", nome:"Silvia", ativo:true, soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:""},
+  {classe:"Classe 2-5", nome:"Clara A.", ativo:true, soDomingo:false, maxTitular:1, maxSubstituto:null, indisponivel:""},
+  {classe:"Classe 2-5", nome:"Ana Clara", ativo:true, soDomingo:true, maxTitular:null, maxSubstituto:null, indisponivel:""},
+  {classe:"Classe 2-5", nome:"Roza", ativo:true, soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:""},
+  {classe:"Classe 2-5", nome:"Jheny", ativo:false, soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:""},
+  {classe:"Classe 6-11", nome:"Ellen", ativo:true, soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:""},
+  {classe:"Classe 6-11", nome:"Sâmia", ativo:true, soDomingo:true, maxTitular:null, maxSubstituto:null, indisponivel:""},
+  {classe:"Classe 6-11", nome:"Bruna", ativo:true, soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:""},
+  {classe:"Classe 6-11", nome:"Sofia", ativo:true, soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:""}
+];
+
+const escalaInicial = [
+  {classe:"Classe 2-5", data:"2026-07-15", titular:"Silvia", substituto:"Clara A.", tema:"GG SEMANA 3", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-07-19", titular:"Roza", substituto:"Silvia", tema:"PG SEMANA 3", enviada:false, obs:""},
+  {classe:"Classe 6-11", data:"2026-07-19", titular:"Sâmia", substituto:"Bruna", tema:"GG SEMANA 2", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-07-22", titular:"Bruna", substituto:"Sâmia", tema:"GG SEMANA 4", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-07-26", titular:"Silvia", substituto:"Clara A.", tema:"GG SEMANA 4", enviada:false, obs:""},
+  {classe:"Classe 6-11", data:"2026-07-26", titular:"Silvia", substituto:"Roza", tema:"GG SEMANA 3", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-07-29", titular:"Silvia", substituto:"Clara A.", tema:"PG SEMANA 4", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-08-02", titular:"Silvia", substituto:"Clara A.", tema:"GG SEMANA 1 - AGOSTO", enviada:false, obs:""},
+  {classe:"Classe 6-11", data:"2026-08-02", titular:"Silvia", substituto:"Roza", tema:"GG SEMANA 1 - AGOSTO", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-08-05", titular:"Lara", substituto:"Silvia", tema:"", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-08-09", titular:"Clara A.", substituto:"Ana Clara", tema:"", enviada:false, obs:""},
+  {classe:"Classe 6-11", data:"2026-08-09", titular:"Bianca", substituto:"Ellen", tema:"", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-08-12", titular:"Roza", substituto:"Jheny", tema:"", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-08-16", titular:"Lara", substituto:"Silvia", tema:"", enviada:false, obs:""},
+  {classe:"Classe 6-11", data:"2026-08-16", titular:"Sâmia", substituto:"Bruna", tema:"", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-08-19", titular:"Clara A.", substituto:"Ana Clara", tema:"", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-08-23", titular:"Roza", substituto:"Jheny", tema:"", enviada:false, obs:""},
+  {classe:"Classe 6-11", data:"2026-08-23", titular:"Bianca", substituto:"Ellen", tema:"", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-08-26", titular:"Lara", substituto:"Silvia", tema:"", enviada:false, obs:""},
+  {classe:"Classe 2-5", data:"2026-08-30", titular:"Clara A.", substituto:"Ana Clara", tema:"", enviada:false, obs:""},
+  {classe:"Classe 6-11", data:"2026-08-30", titular:"Sâmia", substituto:"Bruna", tema:"", enviada:false, obs:""}
+];
+
+const ajudantesIniciais = ['Davi','Nathalia','Cris'];
+
+let state = {
+  professores: JSON.parse(JSON.stringify(professoresIniciais)),
+  escala: JSON.parse(JSON.stringify(escalaInicial)),
+  ajudantes: ajudantesIniciais.slice(),
+  dominical: {}                      // por data: quem dá a EBD e quem ajuda
+};
+
+let chartProf = null, chartClasse = null;
+
+function todayMidnight(){
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function parseISO(iso){
+  const [y,m,d] = iso.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+
+function statusOf(row){
+  // O status manual, quando preenchido, tem prioridade sobre o cálculo pela data.
+  if(row.statusManual === 'Realizada' || row.statusManual === 'A Realizar') return row.statusManual;
+  if(!row.data) return '';
+  return parseISO(row.data) < todayMidnight() ? 'Realizada' : 'A Realizar';
+}
+
+function statusEhManual(row){
+  return row.statusManual === 'Realizada' || row.statusManual === 'A Realizar';
+}
+
+const DIAS = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+
+function diaSemana(iso){
+  if(!iso) return '';
+  return DIAS[parseISO(iso).getDay()];
+}
+
+function tipoOf(row){
+  if(!row.data || !row.classe) return '';
+  const dow = parseISO(row.data).getDay();
+  if(row.classe === 'Classe 2-5' && dow === 3) return 'GG';
+  if(row.classe === 'Classe 2-5' && dow === 0) return 'PG';
+  if(row.classe === 'Classe 6-11' && dow === 0) return 'GG';
+  return 'Verificar';
+}
+
+function fmtDate(iso){
+  if(!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function activeTeachers(classe){
+  return state.professores.filter(p => p.classe === classe && p.ativo).map(p => p.nome);
+}
+
+function tabInit(){
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+      if(t.dataset.tab === 'visao') renderCharts();
+      if(t.dataset.tab === 'dashboard') renderSemana();
+      toggleSidebar(false);
+    });
+  });
+}
+
+/* ---------- Menu lateral (sidebar) ---------- */
+function toggleSidebar(force){
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebarOverlay');
+  if(!sb || !ov) return;
+  const abrir = typeof force === 'boolean' ? force : !sb.classList.contains('open');
+  sb.classList.toggle('open', abrir);
+  ov.classList.toggle('open', abrir);
+}
+
+function irParaAba(nome){
+  const el = document.querySelector('.tab[data-tab="' + nome + '"]');
+  if(el) el.click();
+}
+
+/* ---------- Dashboard semanal (tela inicial) ---------- */
+function inicioSemana(data){
+  const dt = new Date(data);
+  dt.setHours(0,0,0,0);
+  dt.setDate(dt.getDate() - dt.getDay());
+  return dt;
+}
+
+function renderSemana(){
+  const wrap = document.getElementById('semanaListWrap');
+  if(!wrap) return;
+  const ini = inicioSemana(todayMidnight());
+  const fim = new Date(ini); fim.setDate(fim.getDate() + 6);
+  const iniISO = ini.toISOString().slice(0,10);
+  const fimISO = fim.toISOString().slice(0,10);
+  const daSemana = state.escala
+    .filter(r => r.data && r.data >= iniISO && r.data <= fimISO)
+    .slice().sort((a,b) => a.data.localeCompare(b.data));
+
+  if(!daSemana.length){
+    wrap.innerHTML = '<p class="empty">Nenhuma aula programada para esta semana (' + fmtDate(iniISO) + ' a ' + fmtDate(fimISO) + ').</p>';
+    return;
+  }
+  wrap.innerHTML = daSemana.map(r => {
+    const st = statusOf(r);
+    const badgeClass = st === 'Realizada' ? 'real' : 'pend';
+    return `<div class="weekrow">
+      <div class="weekrow-date"><strong>${fmtDate(r.data)}</strong>${escHtml(capitalize(diaSemana(r.data)))}</div>
+      <div class="weekrow-info">
+        <div class="weekrow-classe">${escHtml(r.classe)}</div>
+        <div class="weekrow-nomes">Titular: <strong>${escHtml(r.titular)||'—'}</strong>${r.substituto?' · Subst.: <strong>'+escHtml(r.substituto)+'</strong>':''}</div>
+        ${r.tema ? '<div class="weekrow-tema">'+escHtml(r.tema)+'</div>' : ''}
+      </div>
+      <span class="badge ${badgeClass}">${st}</span>
+    </div>`;
+  }).join('');
+}
+
+function updateField(i, field, value){
+  state.escala[i][field] = value;
+}
+
+function updateFieldAndRerender(i, field, value){
+  state.escala[i][field] = value;
+  renderAll();
+}
+
+function deleteRow(i){
+  if(!confirm('Remover esta aula da escala?')) return;
+  state.escala.splice(i,1);
+  renderAll();
+}
+
+function addRow(){
+  const classe = 'Classe 2-5';
+  const pool = activeTeachers(classe);
+  state.escala.push({classe, data:'', titular: pool[0]||'', substituto: pool[1]||'', tema:'', enviada:false, obs:'', statusManual:''});
+  renderAll();
+  const wrap = document.getElementById('mensalTableWrap');
+  if(wrap && typeof wrap.scrollIntoView === 'function'){
+    wrap.scrollIntoView({behavior:'smooth', block:'end'});
+  }
+}
+
+function teacherOptions(selected, pool){
+  let lista = pool.slice();
+  // preserva quem já estava na aula mas saiu do cadastro (ou está inativo)
+  if(selected && !lista.includes(selected)) lista = [selected].concat(lista);
+  let html = `<option value="" ${!selected?'selected':''}>—</option>`;
+  html += lista.map(n => {
+    const foraDaLista = !pool.includes(n);
+    return `<option value="${escAttr(n)}" ${n===selected?'selected':''}>${escHtml(n)}${foraDaLista?' (fora da lista)':''}</option>`;
+  }).join('');
+  return html;
+}
+
+function escHtml(s){
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escAttr(s){
+  return escHtml(s).replace(/"/g,'&quot;');
+}
+
+function rotuloMes(ym){
+  const [y,m] = ym.split('-');
+  return capitalize(MESES_PT[Number(m)-1]) + ' de ' + y;
+}
+
+/* Monta as opções do filtro de mês a partir dos meses que existem na escala. */
+function preencherFiltroMes(){
+  const sel = document.getElementById('filtroMesMensal');
+  if(!sel) return;
+  const atual = new Date().toISOString().slice(0,7);
+  const meses = [...new Set(state.escala.map(r => (r.data||'').slice(0,7)).filter(Boolean))];
+  if(!meses.includes(atual)) meses.push(atual);
+  meses.sort().reverse();
+  if(!meses.includes(filtroMes) && filtroMes !== 'todos') filtroMes = atual;
+  sel.innerHTML = '<option value="todos"' + (filtroMes==='todos'?' selected':'') + '>Todos os meses</option>' +
+    meses.map(m => `<option value="${m}"${m===filtroMes?' selected':''}>${rotuloMes(m)}${m===atual?' (atual)':''}</option>`).join('');
+}
+
+function renderMensal(){
+  preencherFiltroMes();
+  const fc = document.getElementById('filtroClasseMensal').value;
+  const fs = document.getElementById('filtroStatusMensal').value;
+  const rowsWithIdx = state.escala.map((r,i) => ({r,i}));
+  const filtered = rowsWithIdx.filter(({r}) =>
+    (filtroMes === 'todos' || (r.data||'').slice(0,7) === filtroMes)
+    && (!fc || r.classe===fc) && (!fs || statusOf(r)===fs));
+  filtered.sort((a,b) => (a.r.data||'').localeCompare(b.r.data||''));
+
+  let html = `<table class="mensal"><thead><tr>
+    <th>Classe</th><th>Data</th><th>Dia</th><th>Tipo</th><th>EBD</th><th>Titular</th><th>Substituto</th>
+    <th>Ajudante</th><th>Tema / Lição</th><th>Enviada</th><th>Observações</th><th>Status</th><th></th>
+  </tr></thead><tbody>`;
+
+  if(filtered.length===0){
+    html += `<tr><td colspan="13" class="empty">${filtroMes==='todos'
+      ? 'Nenhuma aula encontrada com esse filtro.'
+      : 'Nenhuma aula em ' + rotuloMes(filtroMes) + '. Gere o rodízio desse mês acima, ou escolha “Todos os meses”.'}</td></tr>`;
+  }
+
+  filtered.forEach(({r,i}) => {
+    const pool = activeTeachers(r.classe);
+    const st = statusOf(r);
+    const badgeClass = st==='Realizada' ? 'real' : 'pend';
+    html += `<tr>
+      <td><select onchange="updateFieldAndRerender(${i},'classe',this.value)">
+        <option value="Classe 2-5" ${r.classe==='Classe 2-5'?'selected':''}>Classe 2-5</option>
+        <option value="Classe 6-11" ${r.classe==='Classe 6-11'?'selected':''}>Classe 6-11</option>
+      </select></td>
+      <td><input type="date" value="${r.data||''}" onchange="updateFieldAndRerender(${i},'data',this.value)"></td>
+      <td>${escHtml(capitalize(diaSemana(r.data)))}</td>
+      <td>${escHtml(tipoOf(r))}</td>
+      <td>${ehDomingo(r.data)
+        ? `<select onchange="setDominical('${r.data}','ebd',this.value)" title="EBD é turma única: o nome vale para as duas classes.">${teacherOptions(dominicalDe(r.data).ebd, todasProfessoras())}</select>`
+        : '<span class="semvaga">—</span>'}</td>
+      <td><select onchange="updateField(${i},'titular',this.value)">${teacherOptions(r.titular, pool)}</select></td>
+      <td><select onchange="updateField(${i},'substituto',this.value)">${teacherOptions(r.substituto, pool)}</select></td>
+      <td>${ehDomingo(r.data)
+        ? `<select onchange="setDominical('${r.data}','ajudante',this.value)" title="Um ajudante por domingo, cobrindo as duas classes.">${teacherOptions(dominicalDe(r.data).ajudante, ajudantesAtivos())}</select>`
+        : '<span class="semvaga">—</span>'}</td>
+      <td><input type="text" value="${escAttr(r.tema)}" oninput="updateField(${i},'tema',this.value)" onblur="renderAll()" placeholder="Ex: GG Semana 1"></td>
+      <td style="text-align:center"><input type="checkbox" class="chkenv" ${r.enviada?'checked':''} onchange="updateFieldAndRerender(${i},'enviada',this.checked)" title="Marque quando a aula já tiver sido enviada à professora."></td>
+      <td><input type="text" value="${escAttr(r.obs)}" oninput="updateField(${i},'obs',this.value)" onblur="renderAll()"></td>
+      <td>
+        <select class="statusSel" onchange="updateFieldAndRerender(${i},'statusManual',this.value)" title="Automático segue a data; escolha manualmente para marcar a aula como realizada ou não.">
+          <option value="" ${!statusEhManual(r)?'selected':''}>Automático (${st})</option>
+          <option value="Realizada" ${r.statusManual==='Realizada'?'selected':''}>Realizada</option>
+          <option value="A Realizar" ${r.statusManual==='A Realizar'?'selected':''}>A Realizar</option>
+        </select>
+        <span class="badge ${badgeClass}" style="margin-left:4px">${st}</span>
+      </td>
+      <td><button class="iconbtn" title="Remover" onclick="deleteRow(${i})">✕</button></td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById('mensalTableWrap').innerHTML = '<p class="swipehint">Arraste a tabela para o lado para ver todas as colunas.</p><div class="tablescroll">' + html + '</div>';
+}
+
+function capitalize(s){
+  return s ? s.charAt(0).toUpperCase()+s.slice(1) : s;
+}
+
+function renderArealizar(){
+  const rows = state.escala.filter(r => statusOf(r)==='A Realizar').slice().sort((a,b)=>a.data.localeCompare(b.data));
+  let html = `<table class="arealizar"><thead><tr>
+    <th>Classe</th><th>Data</th><th>Dia</th><th>Tipo</th><th>Titular</th><th>Substituto</th><th>Tema / Lição</th><th>Observações</th>
+  </tr></thead><tbody>`;
+  if(rows.length===0){
+    html += `<tr><td colspan="8" class="empty">Nenhuma aula pendente.</td></tr>`;
+  }
+  rows.forEach(r => {
+    html += `<tr>
+      <td>${escHtml(r.classe)}</td><td>${fmtDate(r.data)}</td><td>${escHtml(capitalize(diaSemana(r.data)))}</td>
+      <td>${escHtml(tipoOf(r))}</td><td>${escHtml(r.titular)}</td><td>${escHtml(r.substituto)}</td>
+      <td>${escHtml(r.tema)||'<span class="note" style="margin:0">a definir</span>'}</td><td>${escHtml(r.obs)}</td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById('arealizarTableWrap').innerHTML = '<p class="swipehint">Arraste a tabela para o lado para ver todas as colunas.</p><div class="tablescroll">' + html + '</div>';
+}
+
+function renderRealizadas(){
+  const rows = state.escala.filter(r => statusOf(r)==='Realizada').slice().sort((a,b)=>b.data.localeCompare(a.data));
+  let html = `<table class="realizadas"><thead><tr>
+    <th>Classe</th><th>Data</th><th>Dia</th><th>Tipo</th><th>Titular</th><th>Substituto</th><th>Tema / Lição</th><th>Enviada</th><th>Observações</th>
+  </tr></thead><tbody>`;
+  if(rows.length===0){
+    html += `<tr><td colspan="9" class="empty">Nenhuma aula realizada ainda.</td></tr>`;
+  }
+  rows.forEach(r => {
+    const env = r.enviada ? '<span class="badge real">Enviada</span>' : '<span class="badge pend">Não enviada</span>';
+    html += `<tr>
+      <td>${escHtml(r.classe)}</td><td>${fmtDate(r.data)}</td><td>${escHtml(capitalize(diaSemana(r.data)))}</td>
+      <td>${escHtml(tipoOf(r))}</td><td>${escHtml(r.titular)}</td><td>${escHtml(r.substituto)}</td>
+      <td>${escHtml(r.tema)}</td><td>${env}</td><td>${escHtml(r.obs)}</td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById('realizadasTableWrap').innerHTML = '<p class="swipehint">Arraste a tabela para o lado para ver todas as colunas.</p><div class="tablescroll">' + html + '</div>';
+}
+
+function renderProf(){
+  let html = `<p class="note">As restrições abaixo são respeitadas pelo sorteio do rodízio. <strong>Só domingo</strong>: nunca cai em quarta, nem como titular nem como substituto. <strong>Máx. titular</strong> e <strong>máx. subst.</strong>: teto de aulas no mês em cada papel (vazio = sem limite). <strong>Não pode em</strong>: datas soltas separadas por vírgula, no formato AAAA-MM-DD.</p>
+  <table class="prof"><thead><tr><th>Classe</th><th>Nome</th><th>Ativo</th><th>Só domingo</th><th>Máx. titular</th><th>Máx. subst.</th><th>Não pode em</th><th></th></tr></thead><tbody>`;
+  state.professores.forEach((p,i) => {
+    html += `<tr>
+      <td><select onchange="updateProfField(${i},'classe',this.value)">
+        <option value="Classe 2-5" ${p.classe==='Classe 2-5'?'selected':''}>Classe 2-5</option>
+        <option value="Classe 6-11" ${p.classe==='Classe 6-11'?'selected':''}>Classe 6-11</option>
+      </select></td>
+      <td><input type="text" value="${escAttr(p.nome)}" oninput="updateProfFieldSilent(${i},'nome',this.value)" onblur="renderAll()"></td>
+      <td style="text-align:center"><input type="checkbox" ${p.ativo?'checked':''} onchange="updateProfField(${i},'ativo',this.checked)"></td>
+      <td style="text-align:center"><input type="checkbox" ${p.soDomingo?'checked':''} onchange="updateProfField(${i},'soDomingo',this.checked)"></td>
+      <td><input type="number" min="0" style="width:70px" value="${p.maxTitular ?? ''}" onchange="updateProfField(${i},'maxTitular', this.value===''?null:Number(this.value))"></td>
+      <td><input type="number" min="0" style="width:70px" value="${p.maxSubstituto ?? ''}" onchange="updateProfField(${i},'maxSubstituto', this.value===''?null:Number(this.value))"></td>
+      <td><input type="text" placeholder="2026-09-13, 2026-09-27" value="${escAttr(p.indisponivel||'')}" oninput="updateProfFieldSilent(${i},'indisponivel',this.value)" onblur="renderAll()"></td>
+      <td><button class="iconbtn" title="Remover" onclick="deleteProf(${i})">✕</button></td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+
+  html += `<h3 style="margin:22px 0 6px;font-size:15px;color:var(--blue-d)">Ajudantes</h3>
+    <p class="note">Auxiliam nas duas classes, apenas aos domingos. Um por domingo, em rodízio.</p>
+    <div class="ajudlista">`;
+  ajudantesAtivos().forEach((a,i) => {
+    html += `<span class="ajudchip"><input type="text" value="${escAttr(a)}" oninput="updateAjudante(${i},this.value)" onblur="renderAll()">
+      <button class="iconbtn" title="Remover" onclick="deleteAjudante(${i})">✕</button></span>`;
+  });
+  html += `</div><button style="margin-top:8px" onclick="addAjudante()">+ Adicionar ajudante</button>`;
+
+  document.getElementById('profTableWrap').innerHTML = '<p class="swipehint">Arraste a tabela para o lado para ver todas as colunas.</p><div class="tablescroll">' + html + '</div>';
+}
+
+function updateProfField(i, field, value){
+  state.professores[i][field] = value;
+  renderAll();
+}
+function updateProfFieldSilent(i, field, value){
+  state.professores[i][field] = value;
+}
+
+function updateAjudante(i, valor){
+  state.ajudantes[i] = valor;
+}
+
+function addAjudante(){
+  if(!Array.isArray(state.ajudantes)) state.ajudantes = [];
+  state.ajudantes.push('Novo ajudante');
+  renderAll();
+}
+
+function deleteAjudante(i){
+  const nome = state.ajudantes[i];
+  if(nome !== 'Novo ajudante' && !confirm('Remover ' + nome + ' da lista de ajudantes?')) return;
+  state.ajudantes.splice(i,1);
+  renderAll();
+}
+
+function addProfessor(){
+  state.professores.push({classe:'Classe 2-5', nome:'Novo professor', ativo:true,
+    soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:''});
+  renderAll();
+}
+function deleteProf(i){
+  const p = state.professores[i];
+  const linhaNova = !p || p.nome === 'Novo professor';
+  const usadoNaEscala = p && state.escala.some(r => r.titular===p.nome || r.substituto===p.nome);
+  // linha recém-criada por engano sai direto, sem pedir confirmação
+  if(!linhaNova){
+    const aviso = usadoNaEscala
+      ? `${p.nome} aparece em aulas já cadastradas. Removendo do cadastro, essas aulas continuam registradas com o nome dele(a), mas ele(a) não entra mais nos sorteios. Remover mesmo assim?`
+      : 'Remover este professor da lista?';
+    if(!confirm(aviso)) return;
+  }
+  state.professores.splice(i,1);
+  renderAll();
+}
+
+function renderCards(){
+  const today = todayMidnight();
+  const proximas = state.escala.filter(r => statusOf(r)==='A Realizar').slice().sort((a,b)=>a.data.localeCompare(b.data));
+  const realizadas = state.escala.filter(r => statusOf(r)==='Realizada');
+  const ativos = state.professores.filter(p=>p.ativo).length;
+  const ym = today.toISOString().slice(0,7);
+  const doMes = state.escala.filter(r => (r.data||'').slice(0,7)===ym);
+  const doMesRealizadas = doMes.filter(r=>statusOf(r)==='Realizada');
+  const doMesPendentes = doMes.filter(r=>statusOf(r)==='A Realizar');
+  const faltaEnviar = doMes.filter(r => !r.enviada).length;
+
+  let nextHtml = '';
+  if(proximas.length){
+    const p = proximas[0];
+    nextHtml = `<div class="nextcard">
+      <div class="tag">Próxima aula</div>
+      <div class="main">${fmtDate(p.data)} · ${escHtml(capitalize(diaSemana(p.data)))} · ${escHtml(p.classe)}</div>
+      <div class="info">Titular: <strong>${escHtml(p.titular)||'—'}</strong> · Substituto: <strong>${escHtml(p.substituto)||'—'}</strong>${p.tema?' · Tema: '+escHtml(p.tema):''}</div>
+    </div>`;
+  } else {
+    nextHtml = `<div class="nextcard"><div class="tag">Próxima aula</div><div class="main">Nenhuma aula agendada</div></div>`;
+  }
+  document.getElementById('cardsRow').innerHTML = nextHtml + `
+    <div class="card"><div class="lbl">Professores ativos</div><div class="val">${ativos}</div><div class="sub">de ${state.professores.length} cadastrados</div></div>
+    <div class="card"><div class="lbl">Aulas realizadas (mês atual)</div><div class="val">${doMesRealizadas.length}</div><div class="sub">${faltaEnviar} aula(s) por enviar no mês</div></div>
+    <div class="card"><div class="lbl">Aulas a realizar (mês atual)</div><div class="val">${doMesPendentes.length}</div><div class="sub">restantes no mês</div></div>
+    <div class="card"><div class="lbl">Total no histórico</div><div class="val">${state.escala.length}</div><div class="sub">${realizadas.length} realizadas · ${proximas.length} a realizar</div></div>
+  `;
+}
+
+function chartMensagem(idWrap, texto){
+  const w = document.getElementById(idWrap);
+  if(w) w.innerHTML = '<p class="chartmsg">' + texto + '</p>';
+}
+
+function chartCanvas(idWrap, idCanvas){
+  const w = document.getElementById(idWrap);
+  if(!w) return null;
+  if(!w.querySelector('canvas')) w.innerHTML = '<canvas id="' + idCanvas + '"></canvas>';
+  return document.getElementById(idCanvas);
+}
+
+function renderCharts(){
+  // A biblioteca de gráficos vem da internet na primeira abertura.
+  if(typeof Chart === 'undefined'){
+    const aviso = 'Os gráficos não carregaram. Eles precisam de internet na primeira vez que o app abre — conecte-se e recarregue a página.';
+    chartMensagem('wrapProf', aviso);
+    chartMensagem('wrapClasse', aviso);
+    chartProf = null; chartClasse = null;
+    return;
+  }
+
+  const counts = {};
+  state.escala.filter(r => statusOf(r)==='Realizada' && r.titular).forEach(r => {
+    counts[r.titular] = (counts[r.titular]||0)+1;
+  });
+  const labels = Object.keys(counts);
+  const data = Object.values(counts);
+
+  if(labels.length === 0){
+    chartMensagem('wrapProf', state.escala.length === 0
+      ? 'Nenhuma aula cadastrada ainda. Gere o rodízio na aba Escala Mensal para o gráfico aparecer.'
+      : 'Nenhuma aula está marcada como “Realizada” ainda. Este gráfico conta só as aulas já realizadas — marque-as na coluna Status da Escala Mensal, ou espere as datas passarem.');
+    chartProf = null;
+  } else {
+    const ctx1 = chartCanvas('wrapProf', 'chartProf');
+    if(chartProf) chartProf.destroy();
+    chartProf = new Chart(ctx1, {
+      type: 'bar',
+      data: { labels, datasets: [{ label:'Aulas como titular', data, backgroundColor:'#0B5394' }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} }
+    });
+  }
+
+  const c25 = state.escala.filter(r=>r.classe==='Classe 2-5').length;
+  const c611 = state.escala.filter(r=>r.classe==='Classe 6-11').length;
+  if(c25 + c611 === 0){
+    chartMensagem('wrapClasse', 'Nenhuma aula cadastrada ainda.');
+    chartClasse = null;
+  } else {
+    const ctx2 = chartCanvas('wrapClasse', 'chartClasse');
+    if(chartClasse) chartClasse.destroy();
+    chartClasse = new Chart(ctx2, {
+      type:'doughnut',
+      data:{ labels:['Classe 2-5','Classe 6-11'], datasets:[{ data:[c25,c611], backgroundColor:['#B45F06','#0B5394'] }] },
+      options:{ responsive:true, maintainAspectRatio:false }
+    });
+  }
+}
+
+function existsRow(classe, iso){
+  return state.escala.some(r => r.classe===classe && r.data===iso);
+}
+
+let genPreviewRows = [];
+let filtroMes = new Date().toISOString().slice(0,7);   // começa no mês vigente
+
+function classesForGen(){
+  const sel = document.getElementById('genClasse').value;
+  return sel ? [sel] : ['Classe 2-5','Classe 6-11'];
+}
+
+function buildCandidatos(y, m){
+  const daysInMonth = new Date(y,m,0).getDate();
+  const candidatos = {'Classe 2-5':[], 'Classe 6-11':[]};
+  for(let d=1; d<=daysInMonth; d++){
+    const dt = new Date(y, m-1, d);
+    const dow = dt.getDay();
+    const iso = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(dow===3 && !existsRow('Classe 2-5', iso)) candidatos['Classe 2-5'].push(iso);
+    if(dow===0){
+      if(!existsRow('Classe 2-5', iso)) candidatos['Classe 2-5'].push(iso);
+      if(!existsRow('Classe 6-11', iso)) candidatos['Classe 6-11'].push(iso);
+    }
+  }
+  return candidatos;
+}
+
+/* ============================================================
+   SORTEIO DE RODÍZIO — mesma lógica da skill "escala-professores"
+   Regras aplicadas:
+   1. Rodízio justo: ninguém repete antes de todas passarem uma vez
+      (contado separadamente para titular e para substituto).
+   2. Titular nunca é o próprio substituto na mesma data.
+   3. A mesma dupla titular/substituto não se repete dentro do mês.
+   4. Quem só pode aos domingos nunca cai numa quarta, nos dois papéis.
+   5. Tetos mensais por papel (ex.: titular 1x no mês).
+   6. Datas de indisponibilidade são respeitadas.
+   7. Ninguém pega duas aulas seguidas na virada das rodadas.
+   8. Continuidade: quem fechou o mês anterior não abre o mês seguinte.
+   ============================================================ */
+
+function profByName(classe, nome){
+  return state.professores.find(p => p.classe===classe && p.nome===nome) || {};
+}
+
+function datasIndisponiveis(p){
+  return String(p.indisponivel||'').split(',').map(s=>s.trim()).filter(Boolean);
+}
+
+function podeNaData(classe, nome, iso){
+  const p = profByName(classe, nome);
+  if(p.soDomingo && parseISO(iso).getDay() !== 0) return false;
+  if(datasIndisponiveis(p).includes(iso)) return false;
+  return true;
+}
+
+function tetoDe(classe, nome, papel){
+  const p = profByName(classe, nome);
+  const v = papel==='titular' ? p.maxTitular : p.maxSubstituto;
+  return (v===null || v===undefined || v==='') ? Infinity : Number(v);
+}
+
+function embaralhar(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+/* Monta as rodadas do rodízio, respeitando o teto mensal de cada papel. */
+function montarRodadas(classe, pool, nAulas, papel, fecharamMesAnterior){
+  const usos = {};
+  pool.forEach(n => usos[n]=0);
+  const rodadas = [];
+  let restantes = nAulas;
+  while(restantes > 0){
+    let elegiveis = pool.filter(n => usos[n] < tetoDe(classe, n, papel));
+    if(elegiveis.length === 0) return null;
+    elegiveis = embaralhar(elegiveis);
+    if(rodadas.length === 0 && fecharamMesAnterior.length){
+      // quem fechou o mês anterior vai para o fim da fila da primeira rodada
+      elegiveis.sort((a,b) => (fecharamMesAnterior.includes(a)?1:0) - (fecharamMesAnterior.includes(b)?1:0));
+    }
+    const tamanho = Math.min(elegiveis.length, restantes);
+    rodadas.push({pool: elegiveis, tamanho});
+    elegiveis.slice(0,tamanho).forEach(n => usos[n]++);
+    restantes -= tamanho;
+  }
+  return rodadas;
+}
+
+/* Casa professores com datas dentro de uma rodada, por backtracking. */
+function alocarRodada(classe, datas, pool, anterior, vetos, penalizar){
+  const resultado = {};
+  function tentar(i, disponiveis){
+    if(i === datas.length) return true;
+    const iso = datas[i];
+    const previo = i>0 ? resultado[datas[i-1]] : anterior;
+    const veto = vetos[iso] || [];
+    let candidatos = disponiveis.filter(n => !veto.includes(n) && podeNaData(classe, n, iso));
+    candidatos = embaralhar(candidatos);
+    candidatos.sort((a,b) => {
+      const ka = [a===previo?1:0, (penalizar && penalizar(iso,a))?1:0, pool.indexOf(a)];
+      const kb = [b===previo?1:0, (penalizar && penalizar(iso,b))?1:0, pool.indexOf(b)];
+      for(let k=0;k<3;k++){ if(ka[k]!==kb[k]) return ka[k]-kb[k]; }
+      return 0;
+    });
+    for(const n of candidatos){
+      resultado[iso] = n;
+      if(tentar(i+1, disponiveis.filter(x => x!==n))) return true;
+      delete resultado[iso];
+    }
+    return false;
+  }
+  return tentar(0, pool.slice()) ? resultado : null;
+}
+
+/* Sorteia um papel (titular ou substituto) para todas as datas da classe. */
+function sortearPapel(classe, datas, pool, papel, fecharam, vetos, penalizar, tentativas){
+  vetos = vetos || {};
+  for(let t=0; t<(tentativas||600); t++){
+    const rodadas = montarRodadas(classe, pool, datas.length, papel, fecharam);
+    if(!rodadas) return null;
+    const escala = [];
+    let cursor = 0, ok = true;
+    for(const {pool: sub, tamanho} of rodadas){
+      const bloco = datas.slice(cursor, cursor+tamanho);
+      const anterior = escala.length ? escala[escala.length-1][1] : null;
+      const aloc = alocarRodada(classe, bloco, sub, anterior, vetos, penalizar);
+      if(!aloc){ ok = false; break; }
+      bloco.forEach(iso => escala.push([iso, aloc[iso]]));
+      cursor += tamanho;
+    }
+    if(ok) return escala;
+  }
+  return null;
+}
+
+/* Descobre quem ministrou as últimas aulas já cadastradas antes do mês gerado. */
+function fecharamAntesDe(classe, primeiraData){
+  const anteriores = state.escala
+    .filter(r => r.classe===classe && r.data && r.data < primeiraData)
+    .sort((a,b) => a.data.localeCompare(b.data));
+  const ult = anteriores[anteriores.length-1];
+  return ult ? [ult.titular, ult.substituto].filter(Boolean) : [];
+}
+
+/* ============================================================
+   EBD E AJUDANTES — são do domingo inteiro, não de uma classe.
+   Por isso ficam num mapa próprio (state.dominical), indexado pela
+   data, e aparecem iguais nas duas turmas.
+   • EBD: turma única. Todas as professoras das duas classes entram
+     num rodízio contínuo — ninguém repete antes de todas passarem,
+     e o ciclo atravessa os meses.
+   • Ajudante: um por domingo, cobrindo as duas classes, também em
+     rodízio contínuo.
+   ============================================================ */
+
+function ehDomingo(iso){
+  return !!iso && parseISO(iso).getDay() === 0;
+}
+
+function dominicalDe(iso){
+  if(!state.dominical) state.dominical = {};
+  return state.dominical[iso] || {ebd:'', ajudante:''};
+}
+
+function setDominical(iso, campo, valor){
+  if(!state.dominical[iso]) state.dominical[iso] = {ebd:'', ajudante:''};
+  state.dominical[iso][campo] = valor;
+  renderAll();
+}
+
+function ajudantesAtivos(){
+  if(!Array.isArray(state.ajudantes)) state.ajudantes = ajudantesIniciais.slice();
+  return state.ajudantes.filter(Boolean);
+}
+
+function todasProfessoras(){
+  return state.professores.filter(p => p.ativo).map(p => p.nome);
+}
+
+/* Descobre quem ainda não passou no ciclo atual da EBD, olhando o histórico. */
+function faltamNaEBD(ateData){
+  const pool = todasProfessoras();
+  const historico = Object.keys(state.dominical)
+    .filter(d => !ateData || d < ateData)
+    .sort()
+    .map(d => state.dominical[d].ebd)
+    .filter(n => n && pool.includes(n));
+  let vistos = [];
+  historico.forEach(n => {
+    if(vistos.length >= pool.length || vistos.includes(n)) vistos = [];   // ciclo reiniciou
+    vistos.push(n);
+  });
+  const faltam = pool.filter(n => !vistos.includes(n));
+  return faltam.length ? faltam : pool.slice();
+}
+
+/* Continua o rodízio dos ajudantes de onde o mês anterior parou. */
+function proximoAjudante(ateData){
+  const lista = ajudantesAtivos();
+  if(!lista.length) return 0;
+  const anteriores = Object.keys(state.dominical)
+    .filter(d => !ateData || d < ateData)
+    .sort()
+    .map(d => state.dominical[d].ajudante)
+    .filter(Boolean);
+  const ultimo = anteriores[anteriores.length - 1];
+  const idx = lista.indexOf(ultimo);
+  return idx < 0 ? 0 : (idx + 1) % lista.length;
+}
+
+function sortearDominical(datas){
+  const domingos = datas.filter(ehDomingo).sort();
+  if(!domingos.length) return;
+
+  // --- EBD ---
+  const pool = todasProfessoras();
+  let fila = embaralhar(faltamNaEBD(domingos[0]));
+  domingos.forEach(d => {
+    if(!fila.length) fila = embaralhar(pool);          // fechou o ciclo, recomeça
+    const escolhida = fila.shift();
+    if(!state.dominical[d]) state.dominical[d] = {ebd:'', ajudante:''};
+    state.dominical[d].ebd = escolhida;
+  });
+
+  // --- Ajudantes ---
+  const lista = ajudantesAtivos();
+  if(lista.length){
+    let i = proximoAjudante(domingos[0]);
+    domingos.forEach(d => {
+      state.dominical[d].ajudante = lista[i % lista.length];
+      i++;
+    });
+  }
+}
+
+function previewGenerate(){
+  const val = document.getElementById('genMonth').value;
+  if(!val){ alert('Escolha um mês primeiro.'); return; }
+  const [y,m] = val.split('-').map(Number);
+  const candidatos = buildCandidatos(y,m);
+  const classes = classesForGen();
+  const avisos = [];
+
+  genPreviewRows = [];
+  classes.forEach(classe => {
+    const pool = activeTeachers(classe);
+    const datas = candidatos[classe].slice().sort();
+    if(pool.length === 0 || datas.length === 0) return;
+    if(pool.length < 2){
+      avisos.push(`${classe}: só há um professor ativo, não dá para escalar substituto.`);
+      return;
+    }
+
+    const fecharam = fecharamAntesDe(classe, datas[0]);
+
+    const titulares = sortearPapel(classe, datas, pool, 'titular', fecharam, {}, null);
+    if(!titulares){
+      avisos.push(`${classe}: não foi possível montar o rodízio de titulares. Confira as restrições na aba Professores — pode haver gente demais limitada a domingo, ou tetos mensais que não cobrem todas as aulas.`);
+      return;
+    }
+    const titularPorData = {};
+    titulares.forEach(([iso,n]) => titularPorData[iso] = n);
+    const vetos = {};
+    titulares.forEach(([iso,n]) => vetos[iso] = [n]);
+
+    // sorteia algumas vezes e fica com a versão que menos repete duplas
+    let melhor = null, melhorRep = null;
+    for(let t=0;t<12;t++){
+      const vistos = new Set();
+      const subs = sortearPapel(classe, datas, pool, 'substituto', fecharam, vetos,
+        (iso, n) => vistos.has(titularPorData[iso] + '||' + n));
+      if(!subs) break;
+      const pares = subs.map(([iso,n]) => titularPorData[iso] + '||' + n);
+      const rep = pares.length - new Set(pares).size;
+      if(melhorRep === null || rep < melhorRep){ melhor = subs; melhorRep = rep; }
+      if(rep === 0) break;
+    }
+    if(!melhor){
+      avisos.push(`${classe}: os titulares foram sorteados, mas não foi possível fechar os substitutos com as restrições atuais.`);
+      return;
+    }
+    const subPorData = {};
+    melhor.forEach(([iso,n]) => subPorData[iso] = n);
+
+    datas.forEach(iso => {
+      genPreviewRows.push({classe, data: iso, titular: titularPorData[iso],
+        substituto: subPorData[iso], tema:'', enviada:false, obs:'', statusManual:''});
+    });
+  });
+
+  renderPreview(avisos);
+}
+
+function renderPreview(avisos){
+  const wrap = document.getElementById('genPreviewWrap');
+  const alertas = (avisos && avisos.length)
+    ? `<div class="previewbox" style="border-left:4px solid var(--orange-d)">
+         <h4 style="color:var(--orange-d)">Atenção</h4>
+         ${avisos.map(a=>`<p class="previewnote" style="margin:4px 0">${escHtml(a)}</p>`).join('')}
+       </div>` : '';
+  if(genPreviewRows.length===0){
+    wrap.innerHTML = alertas + `<div class="previewbox"><p class="previewnote" style="margin:0">Nenhuma aula nova para gerar nesse período — todas as datas já estão cadastradas na escala, ou não há professores ativos na(s) classe(s) escolhida(s).</p></div>`;
+    return;
+  }
+  const classes = [...new Set(genPreviewRows.map(r=>r.classe))];
+  let html = alertas + `<div class="previewbox"><h4>Pré-visualização do rodízio sorteado</h4>
+    <p class="previewnote">Sorteio com rodízio justo: ninguém repete antes de todos passarem, titular nunca é o próprio substituto, duplas não se repetem no mês e as restrições da aba Professores são respeitadas. Datas já cadastradas na escala não são sorteadas de novo — é assim que se trava uma aula já combinada. Confira antes de adicionar e remova alguma data se não houver aula naquele dia (feriado, evento etc.).</p>`;
+
+  classes.forEach(classe => {
+    const rows = genPreviewRows.map((r,idx)=>({r,idx})).filter(x=>x.r.classe===classe);
+    html += `<div class="previewgroup"><h5>${escHtml(classe)}</h5>
+      <div class="tablescroll"><table class="${classe==='Classe 2-5' ? 'arealizar' : 'realizadas'}"><thead><tr>
+        <th>Data</th><th>Dia</th><th>Tipo</th><th>Titular</th><th>Substituto</th><th></th>
+      </tr></thead><tbody>`;
+    rows.forEach(({r,idx}) => {
+      html += `<tr>
+        <td>${fmtDate(r.data)}</td><td>${escHtml(capitalize(diaSemana(r.data)))}</td><td>${escHtml(tipoOf(r))}</td>
+        <td>${escHtml(r.titular)}</td><td>${escHtml(r.substituto)}</td>
+        <td><button class="iconbtn" title="Remover da pré-visualização" onclick="removePreviewRow(${idx})">✕</button></td>
+      </tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+  });
+
+  html += `<div class="previewactions">
+    <button class="primary" onclick="confirmGenerate()">Confirmar e adicionar à escala (${genPreviewRows.length})</button>
+    <button onclick="previewGenerate()">🎲 Sortear de novo</button>
+    <button onclick="discardGenerate()">Descartar</button>
+  </div></div>`;
+  wrap.innerHTML = html;
+}
+
+function removePreviewRow(idx){
+  genPreviewRows.splice(idx,1);
+  renderPreview();
+}
+
+function confirmGenerate(){
+  sortearDominical([...new Set(genPreviewRows.map(r => r.data))]);
+  const added = genPreviewRows.length;
+  genPreviewRows.forEach(r => state.escala.push(r));
+  genPreviewRows = [];
+  document.getElementById('genPreviewWrap').innerHTML = '';
+  renderAll();
+  alert(`${added} aula(s) adicionada(s) à escala com rodízio automático. Preencha o Tema/Lição na aba Escala Mensal.`);
+}
+
+function discardGenerate(){
+  genPreviewRows = [];
+  document.getElementById('genPreviewWrap').innerHTML = '';
+}
+
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `ibk_kids_backup_${stamp}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('importInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const parsed = JSON.parse(evt.target.result);
+      if(!parsed.professores || !parsed.escala) throw new Error('formato inválido');
+      // backups antigos não têm os campos de restrição: completa com o padrão
+      parsed.professores = parsed.professores.map(p => Object.assign(
+        {soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p));
+      parsed.escala = parsed.escala.map(r => Object.assign({statusManual:'', enviada:false}, r));
+      if(!Array.isArray(parsed.ajudantes)) parsed.ajudantes = ajudantesIniciais.slice();
+      if(!parsed.dominical || typeof parsed.dominical !== 'object') parsed.dominical = {};
+      state = parsed;
+      renderAll();
+      alert('Backup importado com sucesso.');
+    }catch(err){
+      alert('Não foi possível importar esse arquivo: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+/* ============================================================
+   PERSISTÊNCIA — salva no próprio aparelho, sem servidor.
+   Se o navegador bloquear o armazenamento (aba anônima, por ex.),
+   o app continua funcionando; só não guarda entre sessões.
+   ============================================================ */
+const CHAVE = 'ibk_escalas_state_v1';
+let armazenamentoOk = true;
+
+function salvarLocal(){
+  try{
+    localStorage.setItem(CHAVE, JSON.stringify(state));
+    marcarSalvo('Salvo no aparelho');
+  }catch(err){
+    armazenamentoOk = false;
+    marcarSalvo('Sem salvamento automático — use Exportar backup', true);
+  }
+}
+
+function carregarLocal(){
+  try{
+    const bruto = localStorage.getItem(CHAVE);
+    if(!bruto) return false;
+    const parsed = JSON.parse(bruto);
+    if(!parsed.professores || !parsed.escala) return false;
+    parsed.professores = parsed.professores.map(p => Object.assign(
+      {soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p));
+    parsed.escala = parsed.escala.map(r => Object.assign({statusManual:'', enviada:false}, r));
+    if(!Array.isArray(parsed.ajudantes)) parsed.ajudantes = ajudantesIniciais.slice();
+    if(!parsed.dominical || typeof parsed.dominical !== 'object') parsed.dominical = {};
+    state = parsed;
+    return true;
+  }catch(err){
+    armazenamentoOk = false;
+    return false;
+  }
+}
+
+function marcarSalvo(texto, alerta){
+  const el = document.getElementById('saveState');
+  if(!el) return;
+  el.textContent = texto;
+  el.style.color = alerta ? '#a33' : 'var(--muted)';
+}
+
+function limparDados(){
+  if(!confirm('Isso apaga todas as aulas e professores guardados neste aparelho e volta ao cadastro inicial. Exporte um backup antes, se quiser guardar. Continuar?')) return;
+  try{ localStorage.removeItem(CHAVE); }catch(err){}
+  state = { professores: JSON.parse(JSON.stringify(professoresIniciais)),
+            escala: JSON.parse(JSON.stringify(escalaInicial)) };
+  renderAll();
+}
+
+/* ============================================================
+   SINCRONIZAÇÃO ONLINE — dois métodos possíveis
+   • Google Drive: guarda um arquivo JSON no seu próprio Drive.
+     Ideal quando é uma pessoa só usando vários aparelhos.
+   • Supabase: banco compartilhado, sem login, para uma equipe.
+   Em ambos, o estado inteiro é gravado de uma vez e vence sempre
+   a alteração mais recente. Sem internet o app segue funcionando
+   com os dados locais e envia quando a conexão voltar.
+   ============================================================ */
+const SYNC_CFG = 'ibk_sync_cfg_v1';
+const DRIVE_ARQUIVO = 'ibk-escalas.json';
+const DRIVE_ESCOPO = 'https://www.googleapis.com/auth/drive.file';
+
+let syncCfg = null;          // {metodo, url, key, sala, clientId, fileId}
+let syncCarimbo = null;      // marca da última versão conhecida
+let syncPendente = false;    // alteração local ainda não enviada
+let syncTimer = null;
+let syncOcupado = false;
+let syncAplicando = false;
+let syncDebounce = null;
+
+let driveToken = null;
+let driveTokenAte = 0;
+let driveTokenClient = null;
+
+/* ---------- configuração ---------- */
+
+function syncMetodoAtual(){
+  const el = document.getElementById('syncMetodo');
+  return el ? el.value : (syncCfg ? syncCfg.metodo : 'drive');
+}
+
+function syncTrocarMetodo(){
+  const m = syncMetodoAtual();
+  const bd = document.getElementById('camposSupabase');
+  const gd = document.getElementById('camposDrive');
+  if(bd) bd.style.display = m === 'supabase' ? 'grid' : 'none';
+  if(gd) gd.style.display = m === 'drive' ? 'grid' : 'none';
+  const btn = document.getElementById('btnEntrarGoogle');
+  if(btn) btn.style.display = m === 'drive' ? '' : 'none';
+}
+
+function syncCarregarCfg(){
+  try{
+    const bruto = localStorage.getItem(SYNC_CFG);
+    if(bruto) syncCfg = JSON.parse(bruto);
+  }catch(err){ syncCfg = null; }
+  if(!syncCfg) { syncTrocarMetodo(); return; }
+  const sel = document.getElementById('syncMetodo');
+  if(sel) sel.value = syncCfg.metodo || 'supabase';
+  const set = (id,v) => { const e = document.getElementById(id); if(e) e.value = v || ''; };
+  set('syncUrl', syncCfg.url); set('syncKey', syncCfg.key); set('syncSala', syncCfg.sala);
+  set('syncClientId', syncCfg.clientId);
+  syncTrocarMetodo();
+  syncIniciarLoop();
+  if(syncCfg.metodo === 'drive'){
+    syncMsg('Conectado ao Google Drive. Toque em "Entrar com Google" para liberar o acesso desta sessão.', 'ok');
+  } else {
+    syncMsg('Conectado ao grupo "' + syncCfg.sala + '". Buscando dados…', 'ok');
+    syncPuxar(true);
+  }
+}
+
+function syncGuardarCfg(){
+  try{ localStorage.setItem(SYNC_CFG, JSON.stringify(syncCfg)); }catch(err){}
+}
+
+let ultimaSincronizacaoOk = null;
+
+function syncMsg(texto, tipo){
+  const el = document.getElementById('syncStatus');
+  if(el){ el.textContent = texto; el.className = 'syncstatus' + (tipo ? ' ' + tipo : ''); }
+  const topo = document.getElementById('saveState');
+  if(topo && syncCfg){
+    topo.textContent = syncPendente ? 'Salvo no aparelho · enviando…' : 'Salvo e sincronizado';
+  }
+  if(tipo === 'ok') ultimaSincronizacaoOk = new Date();
+  atualizarPillSync(tipo);
+}
+
+/* Pastilha de status no cabeçalho — resume o que está em #syncStatus
+   sem precisar abrir a aba Sincronização. */
+function atualizarPillSync(tipo){
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncPillText');
+  if(!dot || !txt) return;
+  dot.className = 'dot' + (tipo === 'erro' ? ' erro' : (syncCfg ? ' ok' : ''));
+  if(!syncCfg){ txt.textContent = 'Sincronização desligada'; return; }
+  if(syncPendente){ txt.textContent = 'Enviando alterações…'; return; }
+  if(ultimaSincronizacaoOk){
+    const hh = String(ultimaSincronizacaoOk.getHours()).padStart(2,'0');
+    const mm = String(ultimaSincronizacaoOk.getMinutes()).padStart(2,'0');
+    txt.textContent = 'Sincronizado às ' + hh + ':' + mm;
+  } else {
+    txt.textContent = 'Conectado — sincronizando…';
+  }
+}
+
+/* Botão "Sincronizar" do cabeçalho: força uma rodada agora mesmo,
+   sem esperar o próximo ciclo do loop. Sem conexão configurada,
+   leva o usuário direto para a aba Sincronização. */
+function sincronizarAgoraHeader(){
+  if(!syncCfg){ irParaAba('sync'); return; }
+  if(syncOcupado) return;
+  if(syncPendente) syncEnviar(); else syncPuxar(false);
+}
+
+function syncConectar(){
+  const metodo = syncMetodoAtual();
+  if(metodo === 'drive'){
+    const clientId = (document.getElementById('syncClientId').value || '').trim();
+    if(!clientId.endsWith('.apps.googleusercontent.com')){
+      syncMsg('O ID do cliente deve terminar em .apps.googleusercontent.com — confira no Google Cloud Console.', 'erro');
+      return;
+    }
+    if(!String(location.protocol).startsWith('http')){
+      syncMsg('O Google só autoriza o login em um site publicado (https). Abra o app pelo endereço do GitHub Pages, não pelo arquivo salvo no aparelho.', 'erro');
+      return;
+    }
+    syncCfg = {metodo:'drive', clientId, fileId: (syncCfg && syncCfg.fileId) || null};
+    syncGuardarCfg();
+    syncCarimbo = null;
+    driveEntrar(true);
+    return;
+  }
+
+  const url = document.getElementById('syncUrl').value.trim().replace(/\/+$/,'');
+  const key = document.getElementById('syncKey').value.trim();
+  const sala = (document.getElementById('syncSala').value.trim() || 'ibk-kids')
+                 .toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'') || 'ibk-kids';
+  if(!url.startsWith('https://')){ syncMsg('O endereço precisa começar com https:// — confira no painel do Supabase.', 'erro'); return; }
+  if(key.length < 20){ syncMsg('A chave parece incompleta. Copie a chave "anon public" inteira.', 'erro'); return; }
+  syncCfg = {metodo:'supabase', url, key, sala};
+  syncGuardarCfg();
+  document.getElementById('syncSala').value = sala;
+  syncMsg('Conectando…');
+  syncIniciarLoop();
+  syncPuxar(true);
+}
+
+function syncDesconectar(){
+  if(!confirm('Desconectar este aparelho? Os dados continuam salvos aqui, mas param de sincronizar com os outros.')) return;
+  syncCfg = null; syncCarimbo = null; driveToken = null; driveTokenAte = 0;
+  try{ localStorage.removeItem(SYNC_CFG); }catch(err){}
+  if(syncTimer){ clearInterval(syncTimer); syncTimer = null; }
+  syncMsg('Não conectado — os dados estão só neste aparelho.');
+  marcarSalvo('Salvo no aparelho');
+}
+
+/* Verdadeiro enquanto o usuário está digitando em algum campo de texto.
+   Evita puxar dados do servidor (que reconstroem a tela inteira) ou
+   disparar o envio no meio de uma alteração ainda não finalizada. */
+function editandoAgora(){
+  const ae = document.activeElement;
+  if(!ae) return false;
+  if(ae.tagName === 'TEXTAREA') return true;
+  if(ae.tagName === 'INPUT'){
+    const t = (ae.type || 'text').toLowerCase();
+    return t === 'text' || t === 'number' || t === 'date' || t === 'password';
+  }
+  return false;
+}
+
+function syncIniciarLoop(){
+  if(syncTimer) clearInterval(syncTimer);
+  syncTimer = setInterval(() => {
+    if(editandoAgora()) return; // espera terminar a digitação antes de puxar/enviar
+    if(syncPendente) syncEnviar(); else syncPuxar(false);
+  }, 6000);
+}
+
+/* ---------- despacho entre os métodos ---------- */
+
+function syncPuxar(inicial){
+  if(!syncCfg || syncOcupado) return Promise.resolve();
+  return syncCfg.metodo === 'drive' ? drivePuxar(inicial) : supaPuxar(inicial);
+}
+
+function syncEnviar(){
+  if(!syncCfg || syncOcupado) return Promise.resolve();
+  return syncCfg.metodo === 'drive' ? driveEnviar() : supaEnviar();
+}
+
+function syncAgendarEnvio(){
+  if(!syncCfg || syncAplicando) return;
+  syncPendente = true;
+  if(syncDebounce) clearTimeout(syncDebounce);
+  syncDebounce = setTimeout(disparaEnvioDebounced, 1200);
+}
+
+/* Só envia de fato quando o campo em edição já perdeu o foco —
+   se por algum motivo ainda houver um campo ativo, aguarda mais um
+   pouco em vez de enviar um valor pela metade. */
+function disparaEnvioDebounced(){
+  if(editandoAgora()){
+    syncDebounce = setTimeout(disparaEnvioDebounced, 800);
+    return;
+  }
+  syncEnviar();
+}
+
+function syncPuxarAgora(){
+  if(!syncCfg){ syncMsg('Conecte primeiro.', 'erro'); return; }
+  if(syncPendente && !confirm('Há alterações feitas aqui que ainda não foram enviadas. Buscar a versão do servidor pode substituí-las. Continuar?')) return;
+  syncPendente = false; syncCarimbo = null;
+  syncMsg('Buscando…');
+  syncPuxar(true);
+}
+
+function syncEnviarAgora(){
+  if(!syncCfg){ syncMsg('Conecte primeiro.', 'erro'); return; }
+  syncMsg('Enviando…');
+  syncEnviar();
+}
+
+function syncAplicarRemoto(dados, carimbo, origem){
+  if(!dados || !dados.professores || !dados.escala) return false;
+  dados.professores = dados.professores.map(p => Object.assign(
+    {soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p));
+  dados.escala = dados.escala.map(r => Object.assign({statusManual:'', enviada:false}, r));
+  syncCarimbo = carimbo;
+  state = dados;
+  syncAplicando = true;
+  renderAll();
+  syncAplicando = false;
+  syncMsg('Atualizado com a versão ' + (origem||'do servidor') + ' (' + syncQuando(carimbo) + ').', 'ok');
+  return true;
+}
+
+function syncErro(err){
+  const tipo = err && err.message;
+  if(tipo === 'chave'){
+    syncMsg('O servidor recusou a chave. Confira se copiou a chave "anon public" e se as permissões do guia foram aplicadas.', 'erro');
+  } else if(tipo === 'tabela'){
+    syncMsg('A tabela "escalas" não foi encontrada no projeto. Rode o comando SQL do guia COMO-SINCRONIZAR.', 'erro');
+  } else if(tipo === 'login'){
+    syncPendente = true;
+    syncMsg('A sessão do Google expirou. Toque em "Entrar com Google" para continuar sincronizando.', 'erro');
+  } else if(tipo === 'gis'){
+    syncMsg('Não consegui carregar o login do Google. Verifique a internet e tente de novo.', 'erro');
+  } else {
+    syncPendente = true;
+    syncMsg('Sem conexão com o servidor. Os dados estão salvos neste aparelho e serão enviados quando a internet voltar.', 'erro');
+  }
+}
+
+function syncQuando(iso){
+  try{
+    const d = new Date(iso);
+    const diff = Math.round((Date.now() - d.getTime())/1000);
+    if(diff < 60) return 'agora há pouco';
+    if(diff < 3600) return 'há ' + Math.round(diff/60) + ' min';
+    return d.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+  }catch(err){ return ''; }
+}
+
+/* ---------- Supabase ---------- */
+
+function supaHeaders(){
+  return {
+    'apikey': syncCfg.key,
+    'Authorization': 'Bearer ' + syncCfg.key,
+    'Content-Type': 'application/json'
+  };
+}
+
+function supaStatus(resp){
+  if(resp.status === 401 || resp.status === 403) throw new Error('chave');
+  if(resp.status === 404 || resp.status === 400) throw new Error('tabela');
+  if(!resp.ok) throw new Error('http');
+  return resp;
+}
+
+function supaPuxar(inicial){
+  syncOcupado = true;
+  const alvo = syncCfg.url + '/rest/v1/escalas?id=eq.' + encodeURIComponent(syncCfg.sala) + '&select=dados,atualizado_em';
+  return fetch(alvo, {headers: supaHeaders()})
+    .then(supaStatus)
+    .then(resp => resp.json())
+    .then(linhas => {
+      syncOcupado = false;
+      if(!linhas || linhas.length === 0){
+        if(inicial){ syncMsg('Grupo novo — enviando os dados deste aparelho.', 'ok'); return syncEnviar(); }
+        return;
+      }
+      const remoto = linhas[0];
+      if(remoto.atualizado_em === syncCarimbo){
+        syncMsg('Tudo sincronizado · última alteração ' + syncQuando(syncCarimbo) + '.', 'ok');
+        return;
+      }
+      if(syncPendente && !inicial) return syncEnviar();
+      syncAplicarRemoto(remoto.dados, remoto.atualizado_em);
+    })
+    .catch(err => { syncOcupado = false; syncErro(err); });
+}
+
+function supaEnviar(){
+  syncOcupado = true;
+  const carimbo = new Date().toISOString();
+  return fetch(syncCfg.url + '/rest/v1/escalas', {
+    method: 'POST',
+    headers: Object.assign(supaHeaders(), {'Prefer': 'resolution=merge-duplicates,return=minimal'}),
+    body: JSON.stringify([{id: syncCfg.sala, dados: state, atualizado_em: carimbo}])
+  })
+    .then(supaStatus)
+    .then(() => {
+      syncCarimbo = carimbo;
+      syncPendente = false;
+      syncOcupado = false;
+      syncMsg('Enviado — os outros aparelhos recebem em poucos segundos.', 'ok');
+    })
+    .catch(err => { syncOcupado = false; syncErro(err); });
+}
+
+/* ---------- Google Drive ---------- */
+
+function driveCarregarGIS(){
+  if(typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true; s.defer = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('gis'));
+    document.head.appendChild(s);
+  });
+}
+
+/* Pede o token de acesso. 'interativo' abre a tela de contas do Google;
+   sem ele, o Google tenta renovar em silêncio se a sessão ainda valer. */
+function driveEntrar(interativo){
+  if(!syncCfg || syncCfg.metodo !== 'drive'){ syncMsg('Escolha o Google Drive e conecte primeiro.', 'erro'); return; }
+  syncMsg('Abrindo o login do Google…');
+  driveCarregarGIS().then(() => {
+    if(!driveTokenClient){
+      driveTokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: syncCfg.clientId,
+        scope: DRIVE_ESCOPO,
+        callback: (resp) => {
+          if(resp && resp.access_token){
+            driveToken = resp.access_token;
+            driveTokenAte = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
+            syncIniciarLoop();
+            syncMsg('Conectado ao Google Drive. Buscando a escala…', 'ok');
+            syncPuxar(true);
+          } else {
+            syncMsg('Login não concluído. Toque em "Entrar com Google" para tentar de novo.', 'erro');
+          }
+        },
+        error_callback: () => syncMsg('O Google recusou o login. Confira se o endereço deste site está em "Origens JavaScript autorizadas".', 'erro')
+      });
+    }
+    driveTokenClient.requestAccessToken({prompt: interativo ? 'consent' : ''});
+  }).catch(err => syncErro(err));
+}
+
+function driveTokenOk(){
+  if(!driveToken || Date.now() > driveTokenAte) throw new Error('login');
+  return {'Authorization': 'Bearer ' + driveToken};
+}
+
+function driveStatus(resp){
+  if(resp.status === 401 || resp.status === 403){ driveToken = null; throw new Error('login'); }
+  if(!resp.ok) throw new Error('http');
+  return resp;
+}
+
+/* Descobre o id do arquivo do app no Drive (ou cria, se ainda não existir). */
+function driveAcharArquivo(){
+  if(syncCfg.fileId) return Promise.resolve(syncCfg.fileId);
+  const q = encodeURIComponent("name='" + DRIVE_ARQUIVO + "' and trashed=false");
+  return fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,modifiedTime)&spaces=drive',
+               {headers: driveTokenOk()})
+    .then(driveStatus)
+    .then(r => r.json())
+    .then(d => {
+      if(d.files && d.files.length){
+        syncCfg.fileId = d.files[0].id;
+        syncGuardarCfg();
+        return syncCfg.fileId;
+      }
+      return null;
+    });
+}
+
+function driveCriarArquivo(){
+  const limite = '-------ibk' + Date.now();
+  const meta = {name: DRIVE_ARQUIVO, mimeType: 'application/json',
+                description: 'Escala de professores da IBK KIDS — arquivo do app IBK Escalas.'};
+  const corpo =
+    '--' + limite + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(meta) + '\r\n' +
+    '--' + limite + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(state) + '\r\n' +
+    '--' + limite + '--';
+  return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime', {
+    method: 'POST',
+    headers: Object.assign(driveTokenOk(), {'Content-Type': 'multipart/related; boundary=' + limite}),
+    body: corpo
+  })
+    .then(driveStatus)
+    .then(r => r.json())
+    .then(d => {
+      syncCfg.fileId = d.id;
+      syncGuardarCfg();
+      syncCarimbo = d.modifiedTime;
+      syncPendente = false;
+      syncMsg('Arquivo criado no seu Drive. A partir de agora tudo é salvo lá.', 'ok');
+    });
+}
+
+function drivePuxar(inicial){
+  syncOcupado = true;
+  return Promise.resolve()
+    .then(() => driveAcharArquivo())
+    .then(id => {
+      if(!id){
+        syncOcupado = false;
+        if(inicial){ syncMsg('Nenhuma escala no Drive ainda — enviando os dados deste aparelho.', 'ok'); return driveCriarArquivo(); }
+        return;
+      }
+      return fetch('https://www.googleapis.com/drive/v3/files/' + id + '?fields=modifiedTime',
+                   {headers: driveTokenOk()})
+        .then(driveStatus)
+        .then(r => r.json())
+        .then(info => {
+          if(info.modifiedTime === syncCarimbo){
+            syncOcupado = false;
+            syncMsg('Tudo sincronizado · última alteração ' + syncQuando(syncCarimbo) + '.', 'ok');
+            return;
+          }
+          if(syncPendente && !inicial){ syncOcupado = false; return syncEnviar(); }
+          return fetch('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media',
+                       {headers: driveTokenOk()})
+            .then(driveStatus)
+            .then(r => r.json())
+            .then(dados => {
+              syncOcupado = false;
+              syncAplicarRemoto(dados, info.modifiedTime, 'do Drive');
+            });
+        });
+    })
+    .catch(err => { syncOcupado = false; syncErro(err); });
+}
+
+function driveEnviar(){
+  syncOcupado = true;
+  return Promise.resolve()
+    .then(() => driveAcharArquivo())
+    .then(id => {
+      if(!id) return driveCriarArquivo();
+      return fetch('https://www.googleapis.com/upload/drive/v3/files/' + id + '?uploadType=media&fields=modifiedTime', {
+        method: 'PATCH',
+        headers: Object.assign(driveTokenOk(), {'Content-Type': 'application/json'}),
+        body: JSON.stringify(state)
+      })
+        .then(driveStatus)
+        .then(r => r.json())
+        .then(d => {
+          syncCarimbo = d.modifiedTime;
+          syncPendente = false;
+          syncMsg('Salvo no seu Google Drive · ' + syncQuando(d.modifiedTime) + '.', 'ok');
+        });
+    })
+    .then(() => { syncOcupado = false; })
+    .catch(err => { syncOcupado = false; syncErro(err); });
+}
+
+const LOGO_KOINONIA = 'data:image/png;base64,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';
+
+const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho',
+                  'julho','agosto','setembro','outubro','novembro','dezembro'];
+
+const NOME_CLASSE_PDF = {'Classe 2-5':'CLASSE 2 a 5', 'Classe 6-11':'CLASSE 6 a 11'};
+
+function gerarPDF(){
+  const val = document.getElementById('pdfMonth').value;
+  if(!val){ alert('Escolha o mês da escala primeiro.'); return; }
+  const [y,m] = val.split('-').map(Number);
+  const doMes = state.escala
+    .filter(r => (r.data||'').slice(0,7) === val)
+    .slice()
+    .sort((a,b) => a.data.localeCompare(b.data));
+
+  if(doMes.length === 0){
+    alert(`Não há aulas cadastradas em ${MESES_PT[m-1]} de ${y}. Gere o rodízio desse mês antes.`);
+    return;
+  }
+
+  const classes = ['Classe 2-5','Classe 6-11'].filter(c => doMes.some(r => r.classe===c));
+  let html = '';
+
+  classes.forEach(classe => {
+    const rows = doMes.filter(r => r.classe===classe);
+    html += `<div class="folha">
+      <div class="faixa">
+        <img class="esq" src="${LOGO_KOINONIA}" alt="">
+        <img class="dir" src="${LOGO_KOINONIA}" alt="">
+        <h1>KOINONIA KIDS</h1>
+      </div>
+      <div class="quadro">
+        <div class="clstitulo">${escHtml(NOME_CLASSE_PDF[classe] || classe)}</div>
+        <table><thead><tr>
+          <th style="width:12%">DATA</th><th style="width:19%">DIA</th><th style="width:22%">EBD</th>
+          <th style="width:27%">CULTO - NOITE</th><th style="width:20%">AJUDANTES</th>
+        </tr></thead><tbody>`;
+    rows.forEach(r => {
+      const dom = ehDomingo(r.data) ? dominicalDe(r.data) : {ebd:'', ajudante:''};
+      const sub = r.substituto ? `<span class="sub">(Subst. ${escHtml(r.substituto)})</span>` : '';
+      html += `<tr>
+        <td class="tit">${fmtDate(r.data).slice(0,5)}</td>
+        <td class="tit">${escHtml(diaSemana(r.data).toUpperCase())}</td>
+        <td class="ebd">${escHtml(dom.ebd)}</td>
+        <td><span class="nome">${escHtml(r.titular)}</span>${sub}</td>
+        <td>${escHtml(dom.ajudante)}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+  });
+
+  document.getElementById('printArea').innerHTML = html;
+  document.body.classList.add('printing');
+  setTimeout(() => {
+    window.print();
+    document.body.classList.remove('printing');
+  }, 120);
+}
+
+function renderAll(){
+  salvarLocal();
+  syncAgendarEnvio();
+  renderCards();
+  renderSemana();
+  renderMensal();
+  renderArealizar();
+  renderRealizadas();
+  renderProf();
+  if(document.getElementById('panel-visao').classList.contains('active')) renderCharts();
+}
+
+document.getElementById('todayLabel').textContent = todayMidnight().toLocaleDateString('pt-BR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+document.getElementById('genMonth').value = new Date().toISOString().slice(0,7);
+document.getElementById('pdfMonth').value = new Date().toISOString().slice(0,7);
+tabInit();
+carregarLocal();
+renderAll();
+syncCarregarCfg();
+atualizarPillSync();
+
+/* Assim que o app volta a ficar visível (troca de aba/app) ou a internet
+   volta, sincroniza na hora em vez de esperar o próximo ciclo do loop. */
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && syncCfg && !syncOcupado && !editandoAgora()){
+    if(syncPendente) syncEnviar(); else syncPuxar(false);
+  }
+});
+window.addEventListener('online', () => {
+  if(syncCfg && !syncOcupado && !editandoAgora()){
+    if(syncPendente) syncEnviar(); else syncPuxar(false);
+  }
+});
+
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
