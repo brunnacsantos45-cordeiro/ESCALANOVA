@@ -779,7 +779,7 @@ function renderRealizadas(){
 }
 
 function renderProf(){
-  let html = `<p class="note">As restrições abaixo são respeitadas pelo sorteio do rodízio. <strong>Só domingo</strong>: nunca cai em quarta, nem como titular nem como substituto. <strong>Máx. titular</strong> e <strong>máx. subst.</strong>: teto de aulas no mês em cada papel (vazio = sem limite). <strong>Não pode em</strong>: datas soltas separadas por vírgula, no formato AAAA-MM-DD.</p>
+  let html = `<p class="note">As restrições abaixo são respeitadas pelo sorteio do rodízio. <strong>Só domingo</strong>: nunca cai em quarta, nem como titular nem como substituto. <strong>Máx. titular</strong> e <strong>máx. subst.</strong>: teto de aulas no mês em cada papel (vazio = sem limite). <strong>Não pode em</strong>: datas soltas separadas por vírgula, no formato DD/MM/AAAA.</p>
   <table class="prof"><thead><tr><th>Classe</th><th>Nome</th><th>Ativo</th><th>Só domingo</th><th>Máx. titular</th><th>Máx. subst.</th><th>Não pode em</th><th></th></tr></thead><tbody>`;
   state.professores.forEach((p,i) => {
     html += `<tr>
@@ -792,7 +792,7 @@ function renderProf(){
       <td style="text-align:center"><input type="checkbox" ${p.soDomingo?'checked':''} onchange="updateProfField(${i},'soDomingo',this.checked)"></td>
       <td><input type="number" min="0" style="width:70px" value="${p.maxTitular ?? ''}" onchange="updateProfField(${i},'maxTitular', this.value===''?null:Number(this.value))"></td>
       <td><input type="number" min="0" style="width:70px" value="${p.maxSubstituto ?? ''}" onchange="updateProfField(${i},'maxSubstituto', this.value===''?null:Number(this.value))"></td>
-      <td><input type="text" placeholder="2026-09-13, 2026-09-27" value="${escAttr(p.indisponivel||'')}" oninput="updateProfFieldSilent(${i},'indisponivel',this.value)" onblur="renderAll()"></td>
+      <td><input type="text" placeholder="13/09/2026, 27/09/2026" value="${escAttr(indisponivelParaBR(p.indisponivel))}" oninput="updateProfFieldSilent(${i},'indisponivel',this.value)" onblur="finalizarIndisponivel(${i}, this)"></td>
       <td><button class="iconbtn" title="Remover" onclick="deleteProf(${i})">✕</button></td>
     </tr>`;
   });
@@ -993,6 +993,26 @@ function profByName(classe, nome){
 
 function datasIndisponiveis(p){
   return String(p.indisponivel||'').split(',').map(s=>s.trim()).filter(Boolean);
+}
+
+// Conversão apenas para exibição/edição — o armazenamento interno continua em ISO (AAAA-MM-DD).
+function isoParaBR(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso.trim();
+}
+function brParaIso(br){
+  const m = /^(\d{2})[\/-](\d{2})[\/-](\d{4})$/.exec(br.trim());
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : br.trim();
+}
+function indisponivelParaBR(str){
+  return datasIndisponiveis({indisponivel:str}).map(isoParaBR).join(', ');
+}
+function indisponivelParaISO(str){
+  return String(str||'').split(',').map(s=>s.trim()).filter(Boolean).map(brParaIso).join(',');
+}
+function finalizarIndisponivel(i, inputEl){
+  state.professores[i].indisponivel = indisponivelParaISO(inputEl.value);
+  renderAll();
 }
 
 function podeNaData(classe, nome, iso){
