@@ -463,6 +463,7 @@ let state = {
   professores: JSON.parse(JSON.stringify(professoresIniciais)),
   escala: JSON.parse(JSON.stringify(escalaInicial)),
   ajudantes: ajudantesIniciais.slice(),
+  ajudantesDisp: {},                 // por nome do ajudante: datas (ISO, separadas por vírgula) em que ele PODE servir; vazio = qualquer domingo
   dominical: {}                      // por data: quem dá a EBD e quem ajuda
 };
 
@@ -704,7 +705,7 @@ function renderMensal(){
       <td><select onchange="updateField(${i},'titular',this.value)">${teacherOptions(r.titular, pool)}</select></td>
       <td><select onchange="updateField(${i},'substituto',this.value)">${teacherOptions(r.substituto, pool)}</select></td>
       <td>${ehDomingo(r.data)
-        ? `<select onchange="setDominical('${r.data}','ajudante',this.value)" title="Um ajudante por domingo, cobrindo as duas classes.">${teacherOptions(dominicalDe(r.data).ajudante, ajudantesAtivos())}</select>`
+        ? `<select onchange="setDominical('${r.data}','ajudante',this.value)" title="Um ajudante por domingo, cobrindo as duas classes.">${ajudanteOptions(dominicalDe(r.data).ajudante, r.data)}</select>`
         : '<span class="semvaga">—</span>'}</td>
       <td style="text-align:center"><input type="checkbox" class="chkenv" ${r.enviada?'checked':''} onchange="updateFieldAndRerender(${i},'enviada',this.checked)" title="Marque quando a aula já tiver sido enviada à professora."></td>
       <td>
@@ -799,13 +800,19 @@ function renderProf(){
   html += `</tbody></table>`;
 
   html += `<h3 style="margin:22px 0 6px;font-size:15px;color:var(--blue-d)">Ajudantes</h3>
-    <p class="note">Auxiliam nas duas classes, apenas aos domingos. Um por domingo, em rodízio.</p>
-    <div class="ajudlista">`;
-  ajudantesAtivos().forEach((a,i) => {
-    html += `<span class="ajudchip"><input type="text" value="${escAttr(a)}" oninput="updateAjudante(${i},this.value)" onblur="renderAll()">
-      <button class="iconbtn" title="Remover" onclick="deleteAjudante(${i})">✕</button></span>`;
+    <p class="note">Auxiliam nas duas classes, apenas aos domingos. Um por domingo, em rodízio. Em <strong>Disponível em</strong>, informe as datas em que o ajudante pode servir (DD/MM/AAAA, separadas por vírgula): o sorteio só o escala nessas datas. <strong>Deixe vazio</strong> se ele pode em qualquer domingo.</p>
+    <table class="prof"><thead><tr><th style="width:34%">Nome</th><th>Disponível em</th><th></th></tr></thead><tbody>`;
+  if(!Array.isArray(state.ajudantes)) state.ajudantes = ajudantesIniciais.slice();
+  state.ajudantes.forEach((a,i) => {
+    const aviso = avisoDispAjudante(a);
+    html += `<tr>
+      <td><input type="text" value="${escAttr(a)}" oninput="updateAjudante(${i},this.value)" onblur="renderAll()"></td>
+      <td><input type="text" placeholder="Vazio = todos os domingos" value="${escAttr(indisponivelParaBR(ajudantesDispMap()[a]))}" oninput="updateDispAjudanteSilent(${i},this.value)" onblur="finalizarDispAjudante(${i}, this)">
+        ${aviso ? `<div class="note" style="color:var(--orange-d);margin:4px 0 0">⚠ ${escHtml(aviso)}</div>` : ''}</td>
+      <td><button class="iconbtn" title="Remover" onclick="deleteAjudante(${i})">✕</button></td>
+    </tr>`;
   });
-  html += `</div><button style="margin-top:8px" onclick="addAjudante()">+ Adicionar ajudante</button>`;
+  html += `</tbody></table><button style="margin-top:8px" onclick="addAjudante()">+ Adicionar ajudante</button>`;
 
   document.getElementById('profTableWrap').innerHTML = '<p class="swipehint">Arraste a tabela para o lado para ver todas as colunas.</p><div class="tablescroll">' + html + '</div>';
 }
@@ -819,7 +826,55 @@ function updateProfFieldSilent(i, field, value){
 }
 
 function updateAjudante(i, valor){
+  const antigo = state.ajudantes[i];
   state.ajudantes[i] = valor;
+  // as datas de disponibilidade acompanham o nome do ajudante
+  const m = ajudantesDispMap();
+  if(antigo !== valor && Object.prototype.hasOwnProperty.call(m, antigo)){
+    if(!Object.prototype.hasOwnProperty.call(m, valor)) m[valor] = m[antigo];
+    delete m[antigo];
+  }
+}
+
+/* ---- Disponibilidade dos ajudantes ----------------------------------
+   Guardada em state.ajudantesDisp[nome] = "2026-11-01,2026-11-15" (ISO, como
+   "indisponivel" dos professores). Vazio/ausente = pode em qualquer domingo.
+   Preenchido = só pode nas datas listadas. */
+function ajudantesDispMap(){
+  if(!state.ajudantesDisp || typeof state.ajudantesDisp !== 'object' || Array.isArray(state.ajudantesDisp)) state.ajudantesDisp = {};
+  return state.ajudantesDisp;
+}
+function datasDisponiveisAjudante(nome){
+  return String(ajudantesDispMap()[nome] || '').split(',').map(s=>s.trim()).filter(Boolean);
+}
+function ajudanteDisponivel(nome, iso){
+  const datas = datasDisponiveisAjudante(nome);
+  return datas.length === 0 || datas.includes(iso);
+}
+function updateDispAjudanteSilent(i, valor){
+  const nome = state.ajudantes[i];
+  const iso = indisponivelParaISO(valor);
+  if(iso) ajudantesDispMap()[nome] = iso; else delete ajudantesDispMap()[nome];
+}
+function finalizarDispAjudante(i, inputEl){
+  updateDispAjudanteSilent(i, inputEl.value);
+  renderAll();
+}
+function avisoDispAjudante(nome){
+  const ruins = datasDisponiveisAjudante(nome).filter(d => !/^\d{4}-\d{2}-\d{2}$/.test(d) || parseISO(d).getDay() !== 0);
+  if(!ruins.length) return '';
+  return 'Estas datas não são domingos válidos (use DD/MM/AAAA): ' + ruins.map(isoParaBR).join(', ');
+}
+function ajudanteOptions(selected, iso){
+  const ativos = ajudantesAtivos();
+  let lista = ativos.slice();
+  if(selected && !lista.includes(selected)) lista = [selected].concat(lista);
+  let html = `<option value="" ${!selected?'selected':''}>—</option>`;
+  html += lista.map(n => {
+    const sufixo = !ativos.includes(n) ? ' (fora da lista)' : (!ajudanteDisponivel(n, iso) ? ' (indisponível)' : '');
+    return `<option value="${escAttr(n)}" ${n===selected?'selected':''}>${escHtml(n)}${sufixo}</option>`;
+  }).join('');
+  return html;
 }
 
 function addAjudante(){
@@ -832,6 +887,7 @@ function deleteAjudante(i){
   const nome = state.ajudantes[i];
   if(nome !== 'Novo ajudante' && !confirm('Remover ' + nome + ' da lista de ajudantes?')) return;
   state.ajudantes.splice(i,1);
+  delete ajudantesDispMap()[nome];
   renderAll();
 }
 
@@ -1167,20 +1223,6 @@ function faltamNaEBD(ateData){
   return faltam.length ? faltam : pool.slice();
 }
 
-/* Continua o rodízio dos ajudantes de onde o mês anterior parou. */
-function proximoAjudante(ateData){
-  const lista = ajudantesAtivos();
-  if(!lista.length) return 0;
-  const anteriores = Object.keys(state.dominical)
-    .filter(d => !ateData || d < ateData)
-    .sort()
-    .map(d => state.dominical[d].ajudante)
-    .filter(Boolean);
-  const ultimo = anteriores[anteriores.length - 1];
-  const idx = lista.indexOf(ultimo);
-  return idx < 0 ? 0 : (idx + 1) % lista.length;
-}
-
 function sortearDominical(datas){
   const domingos = datas.filter(ehDomingo).sort();
   if(!domingos.length) return;
@@ -1196,14 +1238,39 @@ function sortearDominical(datas){
   });
 
   // --- Ajudantes ---
+  // Rodízio contínuo: em cada domingo entra, entre os DISPONÍVEIS naquela data,
+  // quem serviu há mais tempo (ou nunca serviu). Assim quem foi pulado por não
+  // poder naquele dia mantém a vez e entra assim que estiver disponível, e o
+  // ciclo atravessa os meses.
+  const semAjudante = [];
   const lista = ajudantesAtivos();
   if(lista.length){
-    let i = proximoAjudante(domingos[0]);
+    const historico = Object.keys(state.dominical)
+      .filter(d => d < domingos[0])
+      .sort()
+      .map(d => state.dominical[d].ajudante)
+      .filter(Boolean);
+    const ultimaVez = {};
+    historico.forEach((n, idx) => { ultimaVez[n] = idx; });
+    let contador = historico.length;
     domingos.forEach(d => {
-      state.dominical[d].ajudante = lista[i % lista.length];
-      i++;
+      const candidatos = lista.filter(n => ajudanteDisponivel(n, d));
+      if(!candidatos.length){
+        state.dominical[d].ajudante = '';
+        semAjudante.push(d);
+        return;
+      }
+      let escolhido = candidatos[0];
+      candidatos.forEach(n => {
+        const u = (n in ultimaVez) ? ultimaVez[n] : -1;
+        const ue = (escolhido in ultimaVez) ? ultimaVez[escolhido] : -1;
+        if(u < ue) escolhido = n;
+      });
+      state.dominical[d].ajudante = escolhido;
+      ultimaVez[escolhido] = contador++;
     });
   }
+  return semAjudante;
 }
 
 function previewGenerate(){
@@ -1261,6 +1328,13 @@ function previewGenerate(){
     });
   });
 
+  const listaAj = ajudantesAtivos();
+  if(listaAj.length){
+    const semAj = [...new Set(genPreviewRows.map(r => r.data))].filter(ehDomingo).sort()
+      .filter(d => !listaAj.some(n => ajudanteDisponivel(n, d)));
+    if(semAj.length) avisos.push(`Nenhum ajudante está disponível em ${semAj.map(fmtDate).join(', ')}. Confira as datas dos ajudantes na aba Professores.`);
+  }
+
   renderPreview(avisos);
 }
 
@@ -1309,13 +1383,17 @@ function removePreviewRow(idx){
 }
 
 function confirmGenerate(){
-  sortearDominical([...new Set(genPreviewRows.map(r => r.data))]);
+  const semAjudante = sortearDominical([...new Set(genPreviewRows.map(r => r.data))]);
   const added = genPreviewRows.length;
   genPreviewRows.forEach(r => state.escala.push(r));
   genPreviewRows = [];
   document.getElementById('genPreviewWrap').innerHTML = '';
   renderAll();
-  alert(`${added} aula(s) adicionada(s) à escala com rodízio automático. Preencha o Tema/Lição na aba Escala Mensal.`);
+  let msg = `${added} aula(s) adicionada(s) à escala com rodízio automático. Preencha o Tema/Lição na aba Escala Mensal.`;
+  if(semAjudante && semAjudante.length){
+    msg += `\n\nAtenção: nenhum ajudante está disponível em ${semAjudante.map(fmtDate).join(', ')}. Esses domingos ficaram sem ajudante — ajuste na Escala Mensal ou na aba Professores.`;
+  }
+  alert(msg);
 }
 
 function discardGenerate(){
