@@ -1282,6 +1282,28 @@ function sortearDominical(datas){
   return semAjudante;
 }
 
+/* Explica, em português, o que está travando o sorteio de uma classe. */
+function diagnosticarRodizio(classe, datas, pool, papel){
+  const problemas = [];
+  const minimo = papel === 'substituto' ? 2 : 1;   // substituto precisa de alguém além do titular
+  datas.forEach(iso => {
+    const podem = pool.filter(n => podeNaData(classe, n, iso));
+    if(podem.length < minimo){
+      problemas.push(`em ${fmtDate(iso)} ${podem.length ? 'só ' + podem.join(', ') + ' pode' : 'ninguém pode'}` +
+        (papel === 'substituto' ? ' (precisa de pelo menos 2 pessoas, uma titular e uma substituta)' : ''));
+    }
+  });
+  const tetos = pool.map(n => tetoDe(classe, n, papel));
+  if(tetos.every(t => t !== Infinity)){
+    const soma = tetos.reduce((x,y) => x+y, 0);
+    if(soma < datas.length) problemas.push(`os tetos de "Máx. ${papel === 'titular' ? 'titular' : 'subst.'}" somam ${soma}, mas há ${datas.length} aulas`);
+  }
+  const bloqueados = pool.filter(n => datas.every(iso => !podeNaData(classe, n, iso)));
+  if(bloqueados.length) problemas.push(`não pode em nenhuma das datas: ${bloqueados.join(', ')} (confira "Só quarta"/"Só domingo" e "Não pode em")`);
+  if(!problemas.length) return `Confira as restrições na aba Professores (${pool.length} professores ativos para ${datas.length} aulas).`;
+  return 'Motivo provável: ' + problemas.join('; ') + '.';
+}
+
 function previewGenerate(){
   const val = document.getElementById('genMonth').value;
   if(!val){ alert('Escolha um mês primeiro.'); return; }
@@ -1302,30 +1324,37 @@ function previewGenerate(){
 
     const fecharam = fecharamAntesDe(classe, datas[0]);
 
-    const titulares = sortearPapel(classe, datas, pool, 'titular', fecharam, {}, null);
-    if(!titulares){
-      avisos.push(`${classe}: não foi possível montar o rodízio de titulares. Confira as restrições na aba Professores — pode haver gente demais limitada a domingo ou a quarta, ou tetos mensais que não cobrem todas as aulas.`);
+    // Tenta até 40 sorteios completos (titulares + substitutos): um sorteio de
+    // titulares pode "queimar" quem seria o único substituto possível de uma data.
+    let titulares = null, titularPorData = null, melhor = null, algumTitular = false;
+    for(let tentativa=0; tentativa<40 && !melhor; tentativa++){
+      titulares = sortearPapel(classe, datas, pool, 'titular', fecharam, {}, null, tentativa===0 ? 600 : 80);
+      if(!titulares) break;
+      algumTitular = true;
+      titularPorData = {};
+      titulares.forEach(([iso,n]) => titularPorData[iso] = n);
+      const vetos = {};
+      titulares.forEach(([iso,n]) => vetos[iso] = [n]);
+
+      // sorteia algumas vezes e fica com a versão que menos repete duplas
+      let melhorRep = null;
+      for(let t=0;t<12;t++){
+        const vistos = new Set();
+        const subs = sortearPapel(classe, datas, pool, 'substituto', fecharam, vetos,
+          (iso, n) => vistos.has(titularPorData[iso] + '||' + n), 120);
+        if(!subs) break;
+        const pares = subs.map(([iso,n]) => titularPorData[iso] + '||' + n);
+        const rep = pares.length - new Set(pares).size;
+        if(melhorRep === null || rep < melhorRep){ melhor = subs; melhorRep = rep; }
+        if(rep === 0) break;
+      }
+    }
+    if(!algumTitular){
+      avisos.push(`${classe}: não foi possível montar o rodízio de titulares. ` + diagnosticarRodizio(classe, datas, pool, 'titular'));
       return;
     }
-    const titularPorData = {};
-    titulares.forEach(([iso,n]) => titularPorData[iso] = n);
-    const vetos = {};
-    titulares.forEach(([iso,n]) => vetos[iso] = [n]);
-
-    // sorteia algumas vezes e fica com a versão que menos repete duplas
-    let melhor = null, melhorRep = null;
-    for(let t=0;t<12;t++){
-      const vistos = new Set();
-      const subs = sortearPapel(classe, datas, pool, 'substituto', fecharam, vetos,
-        (iso, n) => vistos.has(titularPorData[iso] + '||' + n));
-      if(!subs) break;
-      const pares = subs.map(([iso,n]) => titularPorData[iso] + '||' + n);
-      const rep = pares.length - new Set(pares).size;
-      if(melhorRep === null || rep < melhorRep){ melhor = subs; melhorRep = rep; }
-      if(rep === 0) break;
-    }
     if(!melhor){
-      avisos.push(`${classe}: os titulares foram sorteados, mas não foi possível fechar os substitutos com as restrições atuais.`);
+      avisos.push(`${classe}: os titulares foram sorteados, mas não foi possível fechar os substitutos com as restrições atuais. ` + diagnosticarRodizio(classe, datas, pool, 'substituto'));
       return;
     }
     const subPorData = {};
