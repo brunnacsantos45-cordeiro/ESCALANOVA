@@ -2255,6 +2255,29 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
+
+/* Atualização automática: o service worker entrega a versão guardada e baixa a nova
+   em segundo plano. Alguns segundos depois da abertura, olhamos o que ele guardou;
+   se for uma versão mais nova que esta, recarrega sozinho (uma vez por versão).
+   Assim basta trocar o index.html no GitHub — não é preciso mexer no sw.js. */
+const APP_VERSAO = '2026-10-26-v16';
+function verificarAtualizacaoApp(){
+  if(!('caches' in window) || !location.protocol.startsWith('http')) return;
+  caches.match(location.origin + location.pathname).then(resp => resp ? resp.clone().text() : '').then(txt => {
+    const m = /const APP_VERSAO = '([^']+)'/.exec(txt || '');
+    if(!m || m[1] === APP_VERSAO) return;
+    try{
+      const marca = 'ibk-recarregou-' + m[1];
+      if(sessionStorage.getItem(marca)) return;
+      sessionStorage.setItem(marca, '1');
+    }catch(e){}
+    location.reload();
+  }).catch(() => {});
+}
+window.addEventListener('load', () => {
+  setTimeout(verificarAtualizacaoApp, 5000);
+  setTimeout(verificarAtualizacaoApp, 15000);
+});
 </script>
 </body>
 </html>
