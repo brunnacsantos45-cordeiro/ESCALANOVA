@@ -1,7 +1,7 @@
 /* Service worker do IBK Escalas.
    Guarda os arquivos do app para funcionar sem internet.
    Ao publicar uma versão nova, troque o número do CACHE. */
-const CACHE = 'ibk-escalas-v9';
+const CACHE = 'ibk-escalas-v15';
 
 const ARQUIVOS = [
   './',

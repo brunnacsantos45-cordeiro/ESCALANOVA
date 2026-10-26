@@ -429,7 +429,7 @@ const professoresIniciais = [
   {classe:"Classe 2-5", nome:"Jheny", ativo:false, soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:""},
   {classe:"Classe 6-11", nome:"Ellen", ativo:true, soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:""},
   {classe:"Classe 6-11", nome:"Sâmia", ativo:true, soDomingo:true, maxTitular:null, maxSubstituto:null, indisponivel:""},
-  {classe:"Classe 6-11", nome:"Bruna", ativo:true, soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:""},
+  {classe:"Classe 6-11", nome:"Bruna", ativo:true, soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:"", reserva:true},
   {classe:"Classe 6-11", nome:"Sofia", ativo:true, soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:""}
 ];
 
@@ -780,8 +780,8 @@ function renderRealizadas(){
 }
 
 function renderProf(){
-  let html = `<p class="note">As restrições abaixo são respeitadas pelo sorteio do rodízio. <strong>Só domingo</strong>: nunca cai em quarta, nem como titular nem como substituto. <strong>Só quarta</strong>: o inverso, nunca cai em domingo (os dois não podem ficar marcados juntos). <strong>Máx. titular</strong> e <strong>máx. subst.</strong>: teto de aulas no mês em cada papel (vazio = sem limite). <strong>Não pode em</strong>: datas soltas separadas por vírgula, no formato DD/MM/AAAA.</p>
-  <table class="prof"><thead><tr><th>Classe</th><th>Nome</th><th>Ativo</th><th>Só domingo</th><th>Só quarta</th><th>Máx. titular</th><th>Máx. subst.</th><th>Não pode em</th><th></th></tr></thead><tbody>`;
+  let html = `<p class="note">As restrições abaixo são respeitadas pelo sorteio do rodízio. <strong>Só domingo</strong>: nunca cai em quarta, nem como titular nem como substituto. <strong>Só quarta</strong>: o inverso, nunca cai em domingo (os dois não podem ficar marcados juntos). <strong>Reserva</strong>: pode ser escalada como substituta na <em>outra</em> classe, mas só quando não houver substituta suficiente nela (respeitando o \"Não pode em\" dela e sem coincidir com a aula dela na própria classe). <strong>Máx. titular</strong> e <strong>máx. subst.</strong>: teto de aulas no mês em cada papel (vazio = sem limite). <strong>Não pode em</strong>: datas soltas separadas por vírgula, no formato DD/MM/AAAA.</p>
+  <table class="prof"><thead><tr><th>Classe</th><th>Nome</th><th>Ativo</th><th>Só domingo</th><th>Só quarta</th><th>Reserva</th><th>Máx. titular</th><th>Máx. subst.</th><th>Não pode em</th><th></th></tr></thead><tbody>`;
   state.professores.forEach((p,i) => {
     html += `<tr>
       <td><select onchange="updateProfField(${i},'classe',this.value)">
@@ -792,6 +792,7 @@ function renderProf(){
       <td style="text-align:center"><input type="checkbox" ${p.ativo?'checked':''} onchange="updateProfField(${i},'ativo',this.checked)"></td>
       <td style="text-align:center"><input type="checkbox" ${p.soDomingo?'checked':''} onchange="setSoDia(${i},'soDomingo',this.checked)"></td>
       <td style="text-align:center"><input type="checkbox" ${p.soQuarta?'checked':''} onchange="setSoDia(${i},'soQuarta',this.checked)"></td>
+      <td style="text-align:center"><input type="checkbox" ${p.reserva?'checked':''} onchange="updateProfField(${i},'reserva',this.checked)" title="Pode ser escalada como substituta na outra classe, só quando faltar substituta lá."></td>
       <td><input type="number" min="0" style="width:70px" value="${p.maxTitular ?? ''}" onchange="updateProfField(${i},'maxTitular', this.value===''?null:Number(this.value))"></td>
       <td><input type="number" min="0" style="width:70px" value="${p.maxSubstituto ?? ''}" onchange="updateProfField(${i},'maxSubstituto', this.value===''?null:Number(this.value))"></td>
       <td><input type="text" placeholder="13/09/2026, 27/09/2026" value="${escAttr(indisponivelParaBR(p.indisponivel))}" oninput="updateProfFieldSilent(${i},'indisponivel',this.value)" onblur="finalizarIndisponivel(${i}, this)"></td>
@@ -900,7 +901,7 @@ function deleteAjudante(i){
 
 function addProfessor(){
   state.professores.push({classe:'Classe 2-5', nome:'Novo professor', ativo:true,
-    soDomingo:false, soQuarta:false, maxTitular:null, maxSubstituto:null, indisponivel:''});
+    soDomingo:false, soQuarta:false, maxTitular:null, maxSubstituto:null, indisponivel:'', reserva:false});
   renderAll();
 }
 function deleteProf(i){
@@ -1050,6 +1051,14 @@ function buildCandidatos(y, m){
    8. Continuidade: quem fechou o mês anterior não abre o mês seguinte.
    ============================================================ */
 
+/* Completa campos que backups/versões antigas não têm. "Reserva": pode ser
+   escalada como substituta na OUTRA classe quando faltar gente (Bruna, por padrão). */
+function completarProf(p){
+  const r = Object.assign({soDomingo:false, soQuarta:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p);
+  if(r.reserva === undefined) r.reserva = (r.nome === 'Bruna');
+  return r;
+}
+
 function profByName(classe, nome){
   return state.professores.find(p => p.classe===classe && p.nome===nome) || {};
 }
@@ -1078,8 +1087,13 @@ function finalizarIndisponivel(i, inputEl){
   renderAll();
 }
 
+let bloqueiosTemp = {};   // "Classe|Nome" -> datas em que a pessoa foi emprestada como reserva à outra classe
 function podeNaData(classe, nome, iso){
-  const p = profByName(classe, nome);
+  const b = bloqueiosTemp[classe + '|' + nome];
+  if(b && b.includes(iso)) return false;
+  return podeNaDataProf(profByName(classe, nome), iso);
+}
+function podeNaDataProf(p, iso){
   if(p.soDomingo && parseISO(iso).getDay() !== 0) return false;
   if(p.soQuarta && parseISO(iso).getDay() !== 3) return false;
   if(datasIndisponiveis(p).includes(iso)) return false;
@@ -1282,15 +1296,89 @@ function sortearDominical(datas){
   return semAjudante;
 }
 
+/* Professoras "Reserva" de OUTRA classe (só substituta, só quando faltar gente). */
+function reservasPara(classe){
+  return state.professores.filter(p => p.ativo && p.reserva && p.classe !== classe).map(p => p.nome);
+}
+function profReserva(nome, classe){
+  return state.professores.find(x => x.nome === nome && x.ativo && x.classe !== classe);
+}
+function tetoExtra(nome){
+  const p = state.professores.find(x => x.nome === nome);
+  const v = p ? p.maxSubstituto : null;
+  return (v===null || v===undefined || v==='') ? Infinity : Number(v);
+}
+let linhasReservaFixas = [];   // aulas já fechadas (nesta geração) por classes que usaram reserva
+function ocupadoNaData(nome, iso, classe){
+  return state.escala.concat(linhasReservaFixas).some(r => r.data === iso && r.classe !== classe && (r.titular === nome || r.substituto === nome));
+}
+function extraPode(nome, iso, classe){
+  const p = profReserva(nome, classe);
+  return !!p && podeNaDataProf(p, iso) && !ocupadoNaData(nome, iso, classe);
+}
+
+/* Plano B do sorteio: quando o rodízio "em rodadas" é impossível com as
+   restrições atuais, procura direto, data por data, qualquer combinação válida
+   (titular e substituto diferentes, respeitando "Só domingo/quarta", "Não pode
+   em" e os tetos), equilibrando ao máximo quem serve mais vezes. */
+function sortearFlexivel(classe, datas, pool, fecharam, extras){
+  extras = extras || [];
+  const setExtras = new Set(extras);
+  const usoT = {}, usoS = {};
+  pool.concat(extras).forEach(n => { usoT[n] = 0; usoS[n] = 0; });
+  const resT = {}, resS = {};
+  const duplas = new Set();
+  let nos = 0;
+  const LIMITE = 300000;
+  function ordenar(lista, uso, i, resAnterior){
+    return embaralhar(lista).sort((a,b) => {
+      const ka = [setExtras.has(a)?1:0, uso[a], (i===0 && fecharam.includes(a))?1:0, a===resAnterior?1:0];
+      const kb = [setExtras.has(b)?1:0, uso[b], (i===0 && fecharam.includes(b))?1:0, b===resAnterior?1:0];
+      for(let k=0;k<4;k++){ if(ka[k]!==kb[k]) return ka[k]-kb[k]; }
+      return 0;
+    });
+  }
+  function dfs(i){
+    if(i === datas.length) return true;
+    if(++nos > LIMITE) return false;
+    const iso = datas[i];
+    const podem = pool.filter(n => podeNaData(classe, n, iso));
+    const ts = ordenar(podem.filter(n => usoT[n] < tetoDe(classe, n, 'titular')), usoT, i, i>0 ? resT[datas[i-1]] : null);
+    for(const t of ts){
+      const candS = podem.filter(n => n!==t && usoS[n] < tetoDe(classe, n, 'substituto'))
+        .concat(extras.filter(n => n!==t && extraPode(n, iso, classe) && usoS[n] < tetoExtra(n)));
+      const ss = ordenar(candS, usoS, i, i>0 ? resS[datas[i-1]] : null)
+        .sort((a,b) => (duplas.has(t+'||'+a)?1:0) - (duplas.has(t+'||'+b)?1:0));
+      for(const sb of ss){
+        resT[iso] = t; resS[iso] = sb; usoT[t]++; usoS[sb]++;
+        const chave = t+'||'+sb, jaTinha = duplas.has(chave); duplas.add(chave);
+        if(dfs(i+1)) return true;
+        usoT[t]--; usoS[sb]--; delete resT[iso]; delete resS[iso];
+        if(!jaTinha) duplas.delete(chave);
+      }
+    }
+    return false;
+  }
+  return dfs(0) ? {titulares: resT, substitutos: resS} : null;
+}
+
+/* Quadro "quem pode em cada data", para explicar um sorteio impossível. */
+function quadroDisponibilidade(classe, datas, pool){
+  return datas.map(iso => {
+    const podem = pool.filter(n => podeNaData(classe, n, iso));
+    return `${fmtDate(iso)}: ${podem.length ? podem.join(', ') : 'ninguém'}`;
+  }).join(' · ');
+}
+
 /* Explica, em português, o que está travando o sorteio de uma classe. */
 function diagnosticarRodizio(classe, datas, pool, papel){
   const problemas = [];
-  const minimo = papel === 'substituto' ? 2 : 1;   // substituto precisa de alguém além do titular
+  const minimo = 2;   // cada aula precisa de duas pessoas: titular e substituta
   datas.forEach(iso => {
     const podem = pool.filter(n => podeNaData(classe, n, iso));
     if(podem.length < minimo){
       problemas.push(`em ${fmtDate(iso)} ${podem.length ? 'só ' + podem.join(', ') + ' pode' : 'ninguém pode'}` +
-        (papel === 'substituto' ? ' (precisa de pelo menos 2 pessoas, uma titular e uma substituta)' : ''));
+        ' (cada aula precisa de 2 pessoas: titular e substituta)');
     }
   });
   const tetos = pool.map(n => tetoDe(classe, n, papel));
@@ -1300,8 +1388,52 @@ function diagnosticarRodizio(classe, datas, pool, papel){
   }
   const bloqueados = pool.filter(n => datas.every(iso => !podeNaData(classe, n, iso)));
   if(bloqueados.length) problemas.push(`não pode em nenhuma das datas: ${bloqueados.join(', ')} (confira "Só quarta"/"Só domingo" e "Não pode em")`);
-  if(!problemas.length) return `Confira as restrições na aba Professores (${pool.length} professores ativos para ${datas.length} aulas).`;
-  return 'Motivo provável: ' + problemas.join('; ') + '.';
+  const quadro = ' Quem pode em cada data → ' + quadroDisponibilidade(classe, datas, pool) + '.';
+  if(!problemas.length) return `Confira as restrições na aba Professores (${pool.length} professores ativos para ${datas.length} aulas, e nenhuma combinação válida foi encontrada).` + quadro;
+  return 'Motivo provável: ' + problemas.join('; ') + '.' + quadro;
+}
+
+/* Sorteio de UMA classe: rodízio exato primeiro, plano B (qualquer combinação
+   válida) se o exato for impossível. Devolve {ok, titular, sub, flex}. */
+function tentarClasse(classe, datas, pool, fecharam){
+  let titularPorData = null, melhor = null, algumTitular = false;
+  // Até 40 sorteios completos (titulares + substitutos): um sorteio de titulares
+  // pode "queimar" quem seria o único substituto possível de uma data.
+  for(let tentativa=0; tentativa<40 && !melhor; tentativa++){
+    const titulares = sortearPapel(classe, datas, pool, 'titular', fecharam, {}, null, tentativa===0 ? 600 : 80);
+    if(!titulares) break;
+    algumTitular = true;
+    titularPorData = {};
+    titulares.forEach(([iso,n]) => titularPorData[iso] = n);
+    const vetos = {};
+    titulares.forEach(([iso,n]) => vetos[iso] = [n]);
+
+    // sorteia algumas vezes e fica com a versão que menos repete duplas
+    let melhorRep = null;
+    for(let t=0;t<12;t++){
+      const vistos = new Set();
+      const subs = sortearPapel(classe, datas, pool, 'substituto', fecharam, vetos,
+        (iso, n) => vistos.has(titularPorData[iso] + '||' + n), 120);
+      if(!subs) break;
+      const pares = subs.map(([iso,n]) => titularPorData[iso] + '||' + n);
+      const rep = pares.length - new Set(pares).size;
+      if(melhorRep === null || rep < melhorRep){ melhor = subs; melhorRep = rep; }
+      if(rep === 0) break;
+    }
+  }
+  if(algumTitular && melhor){
+    const sub = {};
+    melhor.forEach(([iso,n]) => sub[iso] = n);
+    return {ok:true, titular:titularPorData, sub, flex:false};
+  }
+  const flex = sortearFlexivel(classe, datas, pool, fecharam);
+  if(flex) return {ok:true, titular:flex.titulares, sub:flex.substitutos, flex:true};
+  return {ok:false, algumTitular};
+}
+
+function linhasDaClasse(classe, datas, r, obsPorData){
+  return datas.map(iso => ({classe, data: iso, titular: r.titular[iso], substituto: r.sub[iso],
+    tema:'', enviada:false, obs: (obsPorData && obsPorData[iso]) || '', statusManual:''}));
 }
 
 function previewGenerate(){
@@ -1313,6 +1445,10 @@ function previewGenerate(){
   const avisos = [];
 
   genPreviewRows = [];
+  bloqueiosTemp = {};
+  linhasReservaFixas = [];
+  const info = {}, usouPlanoB = {}, pendentes = [];
+
   classes.forEach(classe => {
     const pool = activeTeachers(classe);
     const datas = candidatos[classe].slice().sort();
@@ -1321,50 +1457,60 @@ function previewGenerate(){
       avisos.push(`${classe}: só há um professor ativo, não dá para escalar substituto.`);
       return;
     }
-
-    const fecharam = fecharamAntesDe(classe, datas[0]);
-
-    // Tenta até 40 sorteios completos (titulares + substitutos): um sorteio de
-    // titulares pode "queimar" quem seria o único substituto possível de uma data.
-    let titulares = null, titularPorData = null, melhor = null, algumTitular = false;
-    for(let tentativa=0; tentativa<40 && !melhor; tentativa++){
-      titulares = sortearPapel(classe, datas, pool, 'titular', fecharam, {}, null, tentativa===0 ? 600 : 80);
-      if(!titulares) break;
-      algumTitular = true;
-      titularPorData = {};
-      titulares.forEach(([iso,n]) => titularPorData[iso] = n);
-      const vetos = {};
-      titulares.forEach(([iso,n]) => vetos[iso] = [n]);
-
-      // sorteia algumas vezes e fica com a versão que menos repete duplas
-      let melhorRep = null;
-      for(let t=0;t<12;t++){
-        const vistos = new Set();
-        const subs = sortearPapel(classe, datas, pool, 'substituto', fecharam, vetos,
-          (iso, n) => vistos.has(titularPorData[iso] + '||' + n), 120);
-        if(!subs) break;
-        const pares = subs.map(([iso,n]) => titularPorData[iso] + '||' + n);
-        const rep = pares.length - new Set(pares).size;
-        if(melhorRep === null || rep < melhorRep){ melhor = subs; melhorRep = rep; }
-        if(rep === 0) break;
-      }
-    }
-    if(!algumTitular){
-      avisos.push(`${classe}: não foi possível montar o rodízio de titulares. ` + diagnosticarRodizio(classe, datas, pool, 'titular'));
-      return;
-    }
-    if(!melhor){
-      avisos.push(`${classe}: os titulares foram sorteados, mas não foi possível fechar os substitutos com as restrições atuais. ` + diagnosticarRodizio(classe, datas, pool, 'substituto'));
-      return;
-    }
-    const subPorData = {};
-    melhor.forEach(([iso,n]) => subPorData[iso] = n);
-
-    datas.forEach(iso => {
-      genPreviewRows.push({classe, data: iso, titular: titularPorData[iso],
-        substituto: subPorData[iso], tema:'', enviada:false, obs:'', statusManual:''});
-    });
+    info[classe] = {datas, pool, fecharam: fecharamAntesDe(classe, datas[0])};
+    const r = tentarClasse(classe, datas, pool, info[classe].fecharam);
+    if(!r.ok){ pendentes.push({classe, algumTitular:r.algumTitular}); return; }
+    usouPlanoB[classe] = r.flex;
+    genPreviewRows.push(...linhasDaClasse(classe, datas, r));
   });
+
+  // Classes que não fecharam: usam as professoras "Reserva" da outra classe, só como substitutas
+  pendentes.forEach(({classe, algumTitular}) => {
+    const {datas, pool, fecharam} = info[classe];
+    const extras = reservasPara(classe);
+    const falha = (extra) => avisos.push(algumTitular
+      ? `${classe}: os titulares foram sorteados, mas não foi possível fechar os substitutos com as restrições atuais. ` + diagnosticarRodizio(classe, datas, pool, 'substituto') + extra
+      : `${classe}: não foi possível montar o rodízio de titulares. ` + diagnosticarRodizio(classe, datas, pool, 'titular') + extra);
+    const flex = extras.length ? sortearFlexivel(classe, datas, pool, fecharam, extras) : null;
+    if(!flex){
+      falha(extras.length ? ` Mesmo com a reserva (${extras.join(', ')}) não fechou — confira o "Não pode em" dela nessas datas.` : '');
+      return;
+    }
+    const emprestimos = datas.filter(iso => !pool.includes(flex.substitutos[iso]))
+      .map(iso => ({iso, nome: flex.substitutos[iso], doadora: profReserva(flex.substitutos[iso], classe).classe}));
+
+    // a reserva não pode estar em duas aulas no mesmo dia: refaz a classe dela sem ela nessas datas
+    const antes = JSON.parse(JSON.stringify(bloqueiosTemp));
+    emprestimos.forEach(e => {
+      const k = e.doadora + '|' + e.nome;
+      (bloqueiosTemp[k] = bloqueiosTemp[k] || []).push(e.iso);
+    });
+    const novasLinhas = {}, novoPlanoB = {};
+    let ok = true;
+    [...new Set(emprestimos.map(e => e.doadora))].forEach(d => {
+      if(!info[d] || pendentes.some(x => x.classe === d)) return;   // doadora sem aulas geradas
+      const r = tentarClasse(d, info[d].datas, info[d].pool, info[d].fecharam);
+      if(!r.ok) ok = false; else { novasLinhas[d] = linhasDaClasse(d, info[d].datas, r); novoPlanoB[d] = r.flex; }
+    });
+    if(!ok){
+      bloqueiosTemp = antes;
+      falha(` A reserva (${[...new Set(emprestimos.map(e => e.nome))].join(', ')}) resolveria, mas ela é necessária na própria classe nessas datas.`);
+      return;
+    }
+    Object.keys(novasLinhas).forEach(d => {
+      genPreviewRows = genPreviewRows.filter(r => r.classe !== d).concat(novasLinhas[d]);
+      usouPlanoB[d] = novoPlanoB[d];
+    });
+    const obs = {};
+    emprestimos.forEach(e => obs[e.iso] = `Substituta de reserva (${e.doadora})`);
+    const novas = linhasDaClasse(classe, datas, flex.titulares && {titular:flex.titulares, sub:flex.substitutos}, obs);
+    genPreviewRows.push(...novas);
+    linhasReservaFixas.push(...novas);
+    avisos.push(`${classe}: faltava substituta com as restrições atuais, então ${emprestimos.map(e => `${e.nome} (${e.doadora}) em ${fmtDate(e.iso)}`).join(', ')} entra como reserva, só como substituta. As demais aulas seguem o rodízio da classe.`);
+  });
+
+  Object.keys(usouPlanoB).filter(c => usouPlanoB[c]).forEach(c =>
+    avisos.push(`${c}: com as restrições atuais não dá para manter o rodízio exato (todos passarem antes de repetir). Sorteei a combinação válida mais equilibrada possível — confira o resultado abaixo.`));
 
   const listaAj = ajudantesAtivos();
   if(listaAj.length){
@@ -1459,8 +1605,7 @@ document.getElementById('importInput').addEventListener('change', function(e){
       const parsed = JSON.parse(evt.target.result);
       if(!parsed.professores || !parsed.escala) throw new Error('formato inválido');
       // backups antigos não têm os campos de restrição: completa com o padrão
-      parsed.professores = parsed.professores.map(p => Object.assign(
-        {soDomingo:false, soQuarta:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p));
+      parsed.professores = parsed.professores.map(completarProf);
       parsed.escala = parsed.escala.map(r => Object.assign({statusManual:'', enviada:false}, r));
       if(!Array.isArray(parsed.ajudantes)) parsed.ajudantes = ajudantesIniciais.slice();
       if(!parsed.dominical || typeof parsed.dominical !== 'object') parsed.dominical = {};
@@ -1499,8 +1644,7 @@ function carregarLocal(){
     if(!bruto) return false;
     const parsed = JSON.parse(bruto);
     if(!parsed.professores || !parsed.escala) return false;
-    parsed.professores = parsed.professores.map(p => Object.assign(
-      {soDomingo:false, soQuarta:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p));
+    parsed.professores = parsed.professores.map(completarProf);
     parsed.escala = parsed.escala.map(r => Object.assign({statusManual:'', enviada:false}, r));
     if(!Array.isArray(parsed.ajudantes)) parsed.ajudantes = ajudantesIniciais.slice();
     if(!parsed.dominical || typeof parsed.dominical !== 'object') parsed.dominical = {};
@@ -1744,8 +1888,7 @@ function syncEnviarAgora(){
 
 function syncAplicarRemoto(dados, carimbo, origem){
   if(!dados || !dados.professores || !dados.escala) return false;
-  dados.professores = dados.professores.map(p => Object.assign(
-    {soDomingo:false, soQuarta:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p));
+  dados.professores = dados.professores.map(completarProf);
   dados.escala = dados.escala.map(r => Object.assign({statusManual:'', enviada:false}, r));
   syncCarimbo = carimbo;
   state = dados;
