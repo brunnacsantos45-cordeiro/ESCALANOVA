@@ -325,8 +325,9 @@
     <div id="genPreviewWrap"></div>
     <div class="toolbar" style="border-top:1px dashed var(--line);padding-top:12px">
       <span style="font-size:13px">Escala para enviar aos professores:</span>
-      <input type="month" id="pdfMonth">
-      <button class="primary" onclick="gerarPDF()">Baixar PDF do mês</button>
+      <label style="font-size:13px">De <input type="date" id="pdfDe"></label>
+      <label style="font-size:13px">até <input type="date" id="pdfAte"></label>
+      <button class="primary" onclick="gerarPDF()">Baixar PDF do período</button>
       <span class="note" style="margin:0">Abre a impressão — escolha <strong>Salvar como PDF</strong>.</span>
     </div>
     <div class="toolbar">
@@ -2163,16 +2164,17 @@ const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho',
 const NOME_CLASSE_PDF = {'Classe 2-5':'CLASSE 2 a 5', 'Classe 6-11':'CLASSE 6 a 11'};
 
 function gerarPDF(){
-  const val = document.getElementById('pdfMonth').value;
-  if(!val){ alert('Escolha o mês da escala primeiro.'); return; }
-  const [y,m] = val.split('-').map(Number);
+  const de = document.getElementById('pdfDe').value;
+  const ate = document.getElementById('pdfAte').value;
+  if(!de || !ate){ alert('Escolha a data inicial e a data final da escala.'); return; }
+  if(de > ate){ alert('A data inicial não pode ser depois da data final.'); return; }
   const doMes = state.escala
-    .filter(r => (r.data||'').slice(0,7) === val)
+    .filter(r => r.data && r.data >= de && r.data <= ate)
     .slice()
     .sort((a,b) => a.data.localeCompare(b.data));
 
   if(doMes.length === 0){
-    alert(`Não há aulas cadastradas em ${MESES_PT[m-1]} de ${y}. Gere o rodízio desse mês antes.`);
+    alert(`Não há aulas cadastradas de ${fmtDate(de)} a ${fmtDate(ate)}. Gere o rodízio desse período antes.`);
     return;
   }
 
@@ -2229,7 +2231,14 @@ function renderAll(){
 
 document.getElementById('todayLabel').textContent = todayMidnight().toLocaleDateString('pt-BR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
 document.getElementById('genMonth').value = new Date().toISOString().slice(0,7);
-document.getElementById('pdfMonth').value = new Date().toISOString().slice(0,7);
+(function(){
+  // padrão: do primeiro ao último dia do mês atual
+  const hoje = todayMidnight();
+  const pad = n => String(n).padStart(2,'0');
+  const y = hoje.getFullYear(), m = hoje.getMonth() + 1;
+  document.getElementById('pdfDe').value = `${y}-${pad(m)}-01`;
+  document.getElementById('pdfAte').value = `${y}-${pad(m)}-${pad(new Date(y, m, 0).getDate())}`;
+})();
 tabInit();
 toggleSidebar(sidebarEstadoInicial());
 carregarLocal();
@@ -2260,7 +2269,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    em segundo plano. Alguns segundos depois da abertura, olhamos o que ele guardou;
    se for uma versão mais nova que esta, recarrega sozinho (uma vez por versão).
    Assim basta trocar o index.html no GitHub — não é preciso mexer no sw.js. */
-const APP_VERSAO = '2026-10-26-v16';
+const APP_VERSAO = '2026-10-26-v17';
 function verificarAtualizacaoApp(){
   if(!('caches' in window) || !location.protocol.startsWith('http')) return;
   caches.match(location.origin + location.pathname).then(resp => resp ? resp.clone().text() : '').then(txt => {
