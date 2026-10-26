@@ -1034,6 +1034,23 @@ function buildCandidatos(y, m){
       if(!existsRow('Classe 6-11', iso)) candidatos['Classe 6-11'].push(iso);
     }
   }
+  // Sempre inclui no rodízio as primeiras aulas do MÊS SEGUINTE (para dar tempo de
+  // preparar): 2-5 = primeira quarta e primeiro domingo; 6-11 = primeiro domingo.
+  const ny = m === 12 ? y + 1 : y, nm = m === 12 ? 1 : m + 1;
+  let achouQuarta = false, achouDomingo = false;
+  for(let d=1; d<=7 && !(achouQuarta && achouDomingo); d++){
+    const dow = new Date(ny, nm-1, d).getDay();
+    const iso = `${ny}-${String(nm).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(dow===3){
+      achouQuarta = true;
+      if(!existsRow('Classe 2-5', iso)) candidatos['Classe 2-5'].push(iso);
+    }
+    if(dow===0){
+      achouDomingo = true;
+      if(!existsRow('Classe 2-5', iso)) candidatos['Classe 2-5'].push(iso);
+      if(!existsRow('Classe 6-11', iso)) candidatos['Classe 6-11'].push(iso);
+    }
+  }
   return candidatos;
 }
 
@@ -1535,7 +1552,7 @@ function renderPreview(avisos){
   }
   const classes = [...new Set(genPreviewRows.map(r=>r.classe))];
   let html = alertas + `<div class="previewbox"><h4>Pré-visualização do rodízio sorteado</h4>
-    <p class="previewnote">Sorteio com rodízio justo: ninguém repete antes de todos passarem, titular nunca é o próprio substituto, duplas não se repetem no mês e as restrições da aba Professores são respeitadas. Datas já cadastradas na escala não são sorteadas de novo — é assim que se trava uma aula já combinada. Confira antes de adicionar e remova alguma data se não houver aula naquele dia (feriado, evento etc.).</p>`;
+    <p class="previewnote">Sorteio com rodízio justo: ninguém repete antes de todos passarem, titular nunca é o próprio substituto, duplas não se repetem no mês e as restrições da aba Professores são respeitadas. O rodízio sempre inclui também as primeiras aulas do mês seguinte (2-5: primeira quarta e primeiro domingo; 6-11: primeiro domingo). Datas já cadastradas na escala não são sorteadas de novo — é assim que se trava uma aula já combinada. Confira antes de adicionar e remova alguma data se não houver aula naquele dia (feriado, evento etc.).</p>`;
 
   classes.forEach(classe => {
     const rows = genPreviewRows.map((r,idx)=>({r,idx})).filter(x=>x.r.classe===classe);
