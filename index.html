@@ -780,8 +780,8 @@ function renderRealizadas(){
 }
 
 function renderProf(){
-  let html = `<p class="note">As restrições abaixo são respeitadas pelo sorteio do rodízio. <strong>Só domingo</strong>: nunca cai em quarta, nem como titular nem como substituto. <strong>Máx. titular</strong> e <strong>máx. subst.</strong>: teto de aulas no mês em cada papel (vazio = sem limite). <strong>Não pode em</strong>: datas soltas separadas por vírgula, no formato DD/MM/AAAA.</p>
-  <table class="prof"><thead><tr><th>Classe</th><th>Nome</th><th>Ativo</th><th>Só domingo</th><th>Máx. titular</th><th>Máx. subst.</th><th>Não pode em</th><th></th></tr></thead><tbody>`;
+  let html = `<p class="note">As restrições abaixo são respeitadas pelo sorteio do rodízio. <strong>Só domingo</strong>: nunca cai em quarta, nem como titular nem como substituto. <strong>Só quarta</strong>: o inverso, nunca cai em domingo (os dois não podem ficar marcados juntos). <strong>Máx. titular</strong> e <strong>máx. subst.</strong>: teto de aulas no mês em cada papel (vazio = sem limite). <strong>Não pode em</strong>: datas soltas separadas por vírgula, no formato DD/MM/AAAA.</p>
+  <table class="prof"><thead><tr><th>Classe</th><th>Nome</th><th>Ativo</th><th>Só domingo</th><th>Só quarta</th><th>Máx. titular</th><th>Máx. subst.</th><th>Não pode em</th><th></th></tr></thead><tbody>`;
   state.professores.forEach((p,i) => {
     html += `<tr>
       <td><select onchange="updateProfField(${i},'classe',this.value)">
@@ -790,7 +790,8 @@ function renderProf(){
       </select></td>
       <td><input type="text" value="${escAttr(p.nome)}" oninput="updateProfFieldSilent(${i},'nome',this.value)" onblur="renderAll()"></td>
       <td style="text-align:center"><input type="checkbox" ${p.ativo?'checked':''} onchange="updateProfField(${i},'ativo',this.checked)"></td>
-      <td style="text-align:center"><input type="checkbox" ${p.soDomingo?'checked':''} onchange="updateProfField(${i},'soDomingo',this.checked)"></td>
+      <td style="text-align:center"><input type="checkbox" ${p.soDomingo?'checked':''} onchange="setSoDia(${i},'soDomingo',this.checked)"></td>
+      <td style="text-align:center"><input type="checkbox" ${p.soQuarta?'checked':''} onchange="setSoDia(${i},'soQuarta',this.checked)"></td>
       <td><input type="number" min="0" style="width:70px" value="${p.maxTitular ?? ''}" onchange="updateProfField(${i},'maxTitular', this.value===''?null:Number(this.value))"></td>
       <td><input type="number" min="0" style="width:70px" value="${p.maxSubstituto ?? ''}" onchange="updateProfField(${i},'maxSubstituto', this.value===''?null:Number(this.value))"></td>
       <td><input type="text" placeholder="13/09/2026, 27/09/2026" value="${escAttr(indisponivelParaBR(p.indisponivel))}" oninput="updateProfFieldSilent(${i},'indisponivel',this.value)" onblur="finalizarIndisponivel(${i}, this)"></td>
@@ -819,6 +820,13 @@ function renderProf(){
 
 function updateProfField(i, field, value){
   state.professores[i][field] = value;
+  renderAll();
+}
+/* "Só domingo" e "Só quarta" se excluem: marcar um desmarca o outro. */
+function setSoDia(i, campo, marcado){
+  const p = state.professores[i];
+  p[campo] = marcado;
+  if(marcado) p[campo === 'soDomingo' ? 'soQuarta' : 'soDomingo'] = false;
   renderAll();
 }
 function updateProfFieldSilent(i, field, value){
@@ -892,7 +900,7 @@ function deleteAjudante(i){
 
 function addProfessor(){
   state.professores.push({classe:'Classe 2-5', nome:'Novo professor', ativo:true,
-    soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:''});
+    soDomingo:false, soQuarta:false, maxTitular:null, maxSubstituto:null, indisponivel:''});
   renderAll();
 }
 function deleteProf(i){
@@ -1073,6 +1081,7 @@ function finalizarIndisponivel(i, inputEl){
 function podeNaData(classe, nome, iso){
   const p = profByName(classe, nome);
   if(p.soDomingo && parseISO(iso).getDay() !== 0) return false;
+  if(p.soQuarta && parseISO(iso).getDay() !== 3) return false;
   if(datasIndisponiveis(p).includes(iso)) return false;
   return true;
 }
@@ -1202,6 +1211,7 @@ function ajudantesAtivos(){
 }
 
 function todasProfessoras(){
+  // EBD: todas as professoras ativas entram no rodízio, sem restrição de "Só quarta"/"Só domingo"
   return state.professores.filter(p => p.ativo).map(p => p.nome);
 }
 
@@ -1294,7 +1304,7 @@ function previewGenerate(){
 
     const titulares = sortearPapel(classe, datas, pool, 'titular', fecharam, {}, null);
     if(!titulares){
-      avisos.push(`${classe}: não foi possível montar o rodízio de titulares. Confira as restrições na aba Professores — pode haver gente demais limitada a domingo, ou tetos mensais que não cobrem todas as aulas.`);
+      avisos.push(`${classe}: não foi possível montar o rodízio de titulares. Confira as restrições na aba Professores — pode haver gente demais limitada a domingo ou a quarta, ou tetos mensais que não cobrem todas as aulas.`);
       return;
     }
     const titularPorData = {};
@@ -1421,7 +1431,7 @@ document.getElementById('importInput').addEventListener('change', function(e){
       if(!parsed.professores || !parsed.escala) throw new Error('formato inválido');
       // backups antigos não têm os campos de restrição: completa com o padrão
       parsed.professores = parsed.professores.map(p => Object.assign(
-        {soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p));
+        {soDomingo:false, soQuarta:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p));
       parsed.escala = parsed.escala.map(r => Object.assign({statusManual:'', enviada:false}, r));
       if(!Array.isArray(parsed.ajudantes)) parsed.ajudantes = ajudantesIniciais.slice();
       if(!parsed.dominical || typeof parsed.dominical !== 'object') parsed.dominical = {};
@@ -1461,7 +1471,7 @@ function carregarLocal(){
     const parsed = JSON.parse(bruto);
     if(!parsed.professores || !parsed.escala) return false;
     parsed.professores = parsed.professores.map(p => Object.assign(
-      {soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p));
+      {soDomingo:false, soQuarta:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p));
     parsed.escala = parsed.escala.map(r => Object.assign({statusManual:'', enviada:false}, r));
     if(!Array.isArray(parsed.ajudantes)) parsed.ajudantes = ajudantesIniciais.slice();
     if(!parsed.dominical || typeof parsed.dominical !== 'object') parsed.dominical = {};
@@ -1706,7 +1716,7 @@ function syncEnviarAgora(){
 function syncAplicarRemoto(dados, carimbo, origem){
   if(!dados || !dados.professores || !dados.escala) return false;
   dados.professores = dados.professores.map(p => Object.assign(
-    {soDomingo:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p));
+    {soDomingo:false, soQuarta:false, maxTitular:null, maxSubstituto:null, indisponivel:''}, p));
   dados.escala = dados.escala.map(r => Object.assign({statusManual:'', enviada:false}, r));
   syncCarimbo = carimbo;
   state = dados;
