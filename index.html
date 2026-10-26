@@ -463,7 +463,7 @@ let state = {
   professores: JSON.parse(JSON.stringify(professoresIniciais)),
   escala: JSON.parse(JSON.stringify(escalaInicial)),
   ajudantes: ajudantesIniciais.slice(),
-  ajudantesDisp: {},                 // por nome do ajudante: datas (ISO, separadas por vírgula) em que ele PODE servir; vazio = qualquer domingo
+  ajudantesIndisp: {},               // por nome do ajudante: datas (ISO, separadas por vírgula) em que ele NÃO PODE servir
   dominical: {}                      // por data: quem dá a EBD e quem ajuda
 };
 
@@ -800,14 +800,14 @@ function renderProf(){
   html += `</tbody></table>`;
 
   html += `<h3 style="margin:22px 0 6px;font-size:15px;color:var(--blue-d)">Ajudantes</h3>
-    <p class="note">Auxiliam nas duas classes, apenas aos domingos. Um por domingo, em rodízio. Em <strong>Disponível em</strong>, informe as datas em que o ajudante pode servir (DD/MM/AAAA, separadas por vírgula): o sorteio só o escala nessas datas. <strong>Deixe vazio</strong> se ele pode em qualquer domingo.</p>
-    <table class="prof"><thead><tr><th style="width:34%">Nome</th><th>Disponível em</th><th></th></tr></thead><tbody>`;
+    <p class="note">Auxiliam nas duas classes, apenas aos domingos. Um por domingo, em rodízio. Em <strong>Não pode em</strong>, informe as datas em que o ajudante não pode servir (DD/MM/AAAA, separadas por vírgula): o sorteio não o escala nessas datas. Deixe vazio se ele pode em qualquer domingo.</p>
+    <table class="prof"><thead><tr><th style="width:34%">Nome</th><th>Não pode em</th><th></th></tr></thead><tbody>`;
   if(!Array.isArray(state.ajudantes)) state.ajudantes = ajudantesIniciais.slice();
   state.ajudantes.forEach((a,i) => {
-    const aviso = avisoDispAjudante(a);
+    const aviso = avisoIndispAjudante(a);
     html += `<tr>
       <td><input type="text" value="${escAttr(a)}" oninput="updateAjudante(${i},this.value)" onblur="renderAll()"></td>
-      <td><input type="text" placeholder="Vazio = todos os domingos" value="${escAttr(indisponivelParaBR(ajudantesDispMap()[a]))}" oninput="updateDispAjudanteSilent(${i},this.value)" onblur="finalizarDispAjudante(${i}, this)">
+      <td><input type="text" placeholder="13/09/2026, 27/09/2026" value="${escAttr(indisponivelParaBR(ajudantesIndispMap()[a]))}" oninput="updateIndispAjudanteSilent(${i},this.value)" onblur="finalizarIndispAjudante(${i}, this)">
         ${aviso ? `<div class="note" style="color:var(--orange-d);margin:4px 0 0">⚠ ${escHtml(aviso)}</div>` : ''}</td>
       <td><button class="iconbtn" title="Remover" onclick="deleteAjudante(${i})">✕</button></td>
     </tr>`;
@@ -829,39 +829,38 @@ function updateAjudante(i, valor){
   const antigo = state.ajudantes[i];
   state.ajudantes[i] = valor;
   // as datas de disponibilidade acompanham o nome do ajudante
-  const m = ajudantesDispMap();
+  const m = ajudantesIndispMap();
   if(antigo !== valor && Object.prototype.hasOwnProperty.call(m, antigo)){
     if(!Object.prototype.hasOwnProperty.call(m, valor)) m[valor] = m[antigo];
     delete m[antigo];
   }
 }
 
-/* ---- Disponibilidade dos ajudantes ----------------------------------
-   Guardada em state.ajudantesDisp[nome] = "2026-11-01,2026-11-15" (ISO, como
-   "indisponivel" dos professores). Vazio/ausente = pode em qualquer domingo.
-   Preenchido = só pode nas datas listadas. */
-function ajudantesDispMap(){
-  if(!state.ajudantesDisp || typeof state.ajudantesDisp !== 'object' || Array.isArray(state.ajudantesDisp)) state.ajudantesDisp = {};
-  return state.ajudantesDisp;
+/* ---- Indisponibilidade dos ajudantes ---------------------------------
+   Guardada em state.ajudantesIndisp[nome] = "2026-11-01,2026-11-15" (ISO, como
+   "indisponivel" dos professores). Vazio/ausente = pode em qualquer domingo;
+   as datas listadas são aquelas em que ele NÃO pode. */
+function ajudantesIndispMap(){
+  if(!state.ajudantesIndisp || typeof state.ajudantesIndisp !== 'object' || Array.isArray(state.ajudantesIndisp)) state.ajudantesIndisp = {};
+  return state.ajudantesIndisp;
 }
-function datasDisponiveisAjudante(nome){
-  return String(ajudantesDispMap()[nome] || '').split(',').map(s=>s.trim()).filter(Boolean);
+function datasIndisponiveisAjudante(nome){
+  return String(ajudantesIndispMap()[nome] || '').split(',').map(s=>s.trim()).filter(Boolean);
 }
 function ajudanteDisponivel(nome, iso){
-  const datas = datasDisponiveisAjudante(nome);
-  return datas.length === 0 || datas.includes(iso);
+  return !datasIndisponiveisAjudante(nome).includes(iso);
 }
-function updateDispAjudanteSilent(i, valor){
+function updateIndispAjudanteSilent(i, valor){
   const nome = state.ajudantes[i];
   const iso = indisponivelParaISO(valor);
-  if(iso) ajudantesDispMap()[nome] = iso; else delete ajudantesDispMap()[nome];
+  if(iso) ajudantesIndispMap()[nome] = iso; else delete ajudantesIndispMap()[nome];
 }
-function finalizarDispAjudante(i, inputEl){
-  updateDispAjudanteSilent(i, inputEl.value);
+function finalizarIndispAjudante(i, inputEl){
+  updateIndispAjudanteSilent(i, inputEl.value);
   renderAll();
 }
-function avisoDispAjudante(nome){
-  const ruins = datasDisponiveisAjudante(nome).filter(d => !/^\d{4}-\d{2}-\d{2}$/.test(d) || parseISO(d).getDay() !== 0);
+function avisoIndispAjudante(nome){
+  const ruins = datasIndisponiveisAjudante(nome).filter(d => !/^\d{4}-\d{2}-\d{2}$/.test(d) || parseISO(d).getDay() !== 0);
   if(!ruins.length) return '';
   return 'Estas datas não são domingos válidos (use DD/MM/AAAA): ' + ruins.map(isoParaBR).join(', ');
 }
@@ -887,7 +886,7 @@ function deleteAjudante(i){
   const nome = state.ajudantes[i];
   if(nome !== 'Novo ajudante' && !confirm('Remover ' + nome + ' da lista de ajudantes?')) return;
   state.ajudantes.splice(i,1);
-  delete ajudantesDispMap()[nome];
+  delete ajudantesIndispMap()[nome];
   renderAll();
 }
 
@@ -1238,7 +1237,7 @@ function sortearDominical(datas){
   });
 
   // --- Ajudantes ---
-  // Rodízio contínuo: em cada domingo entra, entre os DISPONÍVEIS naquela data,
+  // Rodízio contínuo: em cada domingo entra, entre os que PODEM naquela data,
   // quem serviu há mais tempo (ou nunca serviu). Assim quem foi pulado por não
   // poder naquele dia mantém a vez e entra assim que estiver disponível, e o
   // ciclo atravessa os meses.
@@ -1332,7 +1331,7 @@ function previewGenerate(){
   if(listaAj.length){
     const semAj = [...new Set(genPreviewRows.map(r => r.data))].filter(ehDomingo).sort()
       .filter(d => !listaAj.some(n => ajudanteDisponivel(n, d)));
-    if(semAj.length) avisos.push(`Nenhum ajudante está disponível em ${semAj.map(fmtDate).join(', ')}. Confira as datas dos ajudantes na aba Professores.`);
+    if(semAj.length) avisos.push(`Nenhum ajudante está disponível em ${semAj.map(fmtDate).join(', ')}. Confira o campo "Não pode em" dos ajudantes na aba Professores.`);
   }
 
   renderPreview(avisos);
