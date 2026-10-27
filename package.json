@@ -1,0 +1,12 @@
+{
+  "name": "escalanova",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "22.x" },
+  "scripts": {
+    "set-password": "node scripts/set-password.mjs"
+  },
+  "dependencies": {
+    "@vercel/functions": "^2.0.0"
+  }
+}
