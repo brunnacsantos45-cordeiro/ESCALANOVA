@@ -188,6 +188,89 @@
   }
   @media (max-width:720px){ .syncform{grid-template-columns:1fr;} .syncactions button{flex:1 1 46%;} }
   .panel{display:none;}
+  /* ---------- Layout estilo dashboard ---------- */
+  header.top{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);
+    box-shadow:var(--shadow-card);padding:14px 18px;margin-bottom:18px;align-items:center;
+  }
+  .actions button{font-size:12px;padding:7px 12px;}
+  .dash{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;}
+  .dash h3{margin:0 0 12px;font-size:14px;font-weight:600;color:var(--ink);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .dash h3 a{font-size:12px;font-weight:500;color:var(--blue-d);cursor:pointer;text-decoration:none;}
+  .dash h3 a:hover{text-decoration:underline;}
+  .d-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);padding:16px 18px;box-shadow:var(--shadow-card);min-width:0;}
+  .d-hero{grid-column:span 8;color:#fff;border-radius:var(--radius-card);padding:20px 22px;box-shadow:var(--shadow-card);
+    background:linear-gradient(135deg,var(--orange-d) 0%,var(--orange-dd) 60%,#C85A00 100%);position:relative;overflow:hidden;}
+  .d-hero::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.10);}
+  .d-hero .tag{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;opacity:.9;}
+  .d-hero .quando{font-size:30px;font-weight:700;line-height:1.15;margin:6px 0 2px;}
+  .d-hero .dataext{font-size:14px;opacity:.95;}
+  .d-hero .aulas{display:grid;gap:10px;margin-top:16px;position:relative;z-index:1;}
+  .d-hero .aula{background:rgba(255,255,255,.16);border-radius:12px;padding:10px 14px;}
+  .d-hero .aula .cl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;opacity:.95;}
+  .d-hero .aula .pessoas{display:flex;flex-wrap:wrap;gap:14px;margin-top:6px;font-size:13px;}
+  .d-hero .aula .pessoas span{display:inline-flex;align-items:center;gap:8px;}
+  .d-hero .aula .tema{font-size:12px;opacity:.92;margin-top:6px;}
+  .avatar{width:28px;height:28px;border-radius:50%;background:#fff;color:var(--orange-dd);font-weight:700;font-size:12px;
+    display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .d-hero .vazio{font-size:16px;margin-top:10px;opacity:.95;}
+  .d-hero .acoes{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:1;}
+  .d-hero .acoes button{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.45);color:#fff;font-size:12px;}
+  .d-hero .acoes button:hover{background:#fff;color:var(--orange-dd);border-color:#fff;}
+  .d-prog{grid-column:span 4;display:flex;flex-direction:column;}
+  .d-prog .ringbox{display:flex;align-items:center;gap:18px;flex:1;}
+  .ring{width:112px;height:112px;flex:0 0 auto;}
+  .ring .trilho{stroke:var(--line);} .ring .valor{stroke:var(--green-d);transition:stroke-dasharray .6s ease;}
+  .ring text{font-family:inherit;fill:var(--ink);}
+  .legenda{display:grid;gap:7px;font-size:13px;}
+  .legenda div{display:flex;align-items:center;gap:8px;}
+  .legenda i{width:10px;height:10px;border-radius:50%;display:inline-block;flex:0 0 auto;}
+  .legenda b{margin-left:auto;padding-left:10px;}
+  .d-kpis{grid-column:span 12;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);padding:14px 16px;box-shadow:var(--shadow-card);display:flex;gap:12px;align-items:center;min-width:0;}
+  .kpi .ico{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .kpi .ico svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+  .kpi .ico.o{background:var(--orange-l);color:var(--orange-dd);} .kpi .ico.b{background:var(--blue-l);color:var(--blue-d);}
+  .kpi .ico.g{background:var(--green-l);color:var(--green-d);} .kpi .ico.y{background:var(--yellow-l);color:var(--yellow-d);}
+  .kpi .num{font-size:26px;font-weight:700;line-height:1.1;}
+  .kpi .rot{font-size:12px;color:var(--muted);}
+  .kpi .sub2{font-size:11px;color:var(--muted);margin-top:1px;}
+  .d-week{grid-column:span 8;} .d-alert{grid-column:span 4;}
+  .d-next{grid-column:span 8;} .d-load{grid-column:span 4;} .d-dom{grid-column:span 12;}
+  .d-week .weekrow{padding:10px 2px;}
+  .alerta{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:10px;margin-bottom:8px;font-size:13px;cursor:pointer;line-height:1.35;}
+  .alerta:last-child{margin-bottom:0;}
+  .alerta.aviso{background:var(--yellow-l);color:var(--yellow-d);} .alerta.erro{background:#F7E7E3;color:#8B2E14;}
+  .alerta.info{background:var(--blue-l);color:var(--blue-d);} .alerta.ok{background:var(--green-l);color:var(--green-d);cursor:default;}
+  .alerta .pt{width:8px;height:8px;border-radius:50%;background:currentColor;margin-top:6px;flex:0 0 auto;}
+  .alerta small{display:block;opacity:.85;}
+  .proxrow{display:flex;align-items:center;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line);}
+  .proxrow:last-child{border-bottom:none;}
+  .datachip{width:52px;flex:0 0 auto;text-align:center;background:var(--orange-l);color:var(--orange-dd);border-radius:10px;padding:5px 0;line-height:1.15;}
+  .datachip b{display:block;font-size:18px;} .datachip span{font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:600;}
+  .proxrow .quem{flex:1;min-width:0;font-size:13px;}
+  .proxrow .quem small{display:block;color:var(--muted);font-size:12px;}
+  .proxrow .quem strong{font-weight:600;}
+  .barra{display:grid;grid-template-columns:96px 1fr auto;gap:10px;align-items:center;margin-bottom:9px;font-size:12px;}
+  .barra .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .barra .tr{height:8px;border-radius:99px;background:#F0EEE7;overflow:hidden;}
+  .barra .tr i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--orange-d),#FFA24D);}
+  .barra .ct{color:var(--muted);white-space:nowrap;}
+  .domgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+  .dombox{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;}
+  .dombox .dd{font-weight:600;margin-bottom:4px;} .dombox .lb{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-top:6px;}
+  .dombox .vz{color:var(--yellow-d);}
+  @media (max-width:1000px){
+    .d-hero,.d-prog,.d-week,.d-alert,.d-next,.d-load{grid-column:span 12;}
+    .d-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .domgrid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+  @media (max-width:480px){
+    .d-hero .quando{font-size:25px;}
+    .kpi{padding:12px;gap:10px;} .kpi .num{font-size:22px;} .kpi .ico{width:36px;height:36px;}
+    .barra{grid-template-columns:78px 1fr auto;}
+  }
+
   .tablescroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;}
   .tablescroll table{min-width:820px;}
   @media (max-width:720px){
@@ -324,10 +407,30 @@
   </header>
 
   <div class="panel active" id="panel-dashboard">
-    <div class="cards" id="cardsRow"></div>
-    <div class="chartbox" style="margin-top:0">
-      <h3>Aulas desta semana</h3>
-      <div id="semanaListWrap"></div>
+    <div class="dash">
+      <section class="d-hero" id="dHero"></section>
+      <section class="d-card d-prog" id="dProg"></section>
+      <section class="d-kpis" id="dKpis"></section>
+      <section class="d-card d-week">
+        <h3>Aulas desta semana <a onclick="irParaAba('mensal')">Escala mensal →</a></h3>
+        <div id="semanaListWrap"></div>
+      </section>
+      <section class="d-card d-alert">
+        <h3>Atenção</h3>
+        <div id="dAlertas"></div>
+      </section>
+      <section class="d-card d-next">
+        <h3>Próximas aulas <a onclick="irParaAba('arealizar')">Ver todas →</a></h3>
+        <div id="dProximas"></div>
+      </section>
+      <section class="d-card d-load">
+        <h3>Rodízio no mês</h3>
+        <div id="dCarga"></div>
+      </section>
+      <section class="d-card d-dom">
+        <h3>Próximos domingos · EBD e ajudantes</h3>
+        <div class="domgrid" id="dDomingos"></div>
+      </section>
     </div>
   </div>
 
@@ -942,34 +1045,188 @@ function deleteProf(i){
   renderAll();
 }
 
-function renderCards(){
-  const today = todayMidnight();
-  const proximas = state.escala.filter(r => statusOf(r)==='A Realizar').slice().sort((a,b)=>a.data.localeCompare(b.data));
-  const realizadas = state.escala.filter(r => statusOf(r)==='Realizada');
-  const ativos = state.professores.filter(p=>p.ativo).length;
-  const ym = today.toISOString().slice(0,7);
-  const doMes = state.escala.filter(r => (r.data||'').slice(0,7)===ym);
-  const doMesRealizadas = doMes.filter(r=>statusOf(r)==='Realizada');
-  const doMesPendentes = doMes.filter(r=>statusOf(r)==='A Realizar');
-  const faltaEnviar = doMes.filter(r => !r.enviada).length;
+/* ---------- Início: painel (dashboard) ---------- */
+function isoLocal(d){
+  const p = n => String(n).padStart(2,'0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
+}
 
-  let nextHtml = '';
+function iniciais(nome){
+  const partes = String(nome || '').trim().split(/\s+/).filter(Boolean);
+  if(!partes.length) return '?';
+  return (partes[0][0] + (partes.length > 1 ? partes[partes.length-1][0] : '')).toUpperCase();
+}
+
+function diasAte(iso){
+  return Math.round((parseISO(iso) - todayMidnight()) / 86400000);
+}
+
+function textoQuando(n){
+  if(n === 0) return 'Hoje';
+  if(n === 1) return 'Amanhã';
+  if(n === -1) return 'Ontem';
+  if(n < 0) return 'Há ' + (-n) + ' dias';
+  return 'Em ' + n + ' dias';
+}
+
+function dashAlertas(proximas, doMes, hojeISO){
+  const lista = [];
+  const limite = isoLocal(new Date(todayMidnight().getTime() + 30*86400000));
+  const proximos30 = proximas.filter(r => r.data <= limite);
+
+  proximos30.forEach(r => {
+    const rot = fmtDate(r.data) + ' · ' + r.classe;
+    if(!r.titular) lista.push({nivel:'erro', aba:'mensal', txt:'Sem titular', det:rot});
+    else {
+      const p = profByName(r.classe, r.titular);
+      if(!p.nome) lista.push({nivel:'aviso', aba:'prof', txt:r.titular + ' não está no cadastro', det:rot});
+      else if(p.ativo === false) lista.push({nivel:'aviso', aba:'prof', txt:r.titular + ' está inativo(a)', det:rot});
+    }
+    if(!r.substituto) lista.push({nivel:'aviso', aba:'mensal', txt:'Sem substituto', det:rot});
+    else if(r.substituto === r.titular) lista.push({nivel:'erro', aba:'mensal', txt:'Titular e substituto são a mesma pessoa', det:rot});
+  });
+
+  // domingos com aula nos próximos 30 dias e sem ajudante definido
+  const doms = [...new Set(proximos30.filter(r => ehDomingo(r.data)).map(r => r.data))];
+  doms.forEach(d => {
+    if(!dominicalDe(d).ajudante) lista.push({nivel:'info', aba:'mensal', txt:'Domingo sem ajudante', det:fmtDate(d)});
+  });
+
+  const semData = state.escala.filter(r => !r.data).length;
+  if(semData) lista.push({nivel:'aviso', aba:'mensal', txt:semData + ' aula(s) sem data', det:'Preencha na Escala Mensal'});
+
+  const porEnviar = doMes.filter(r => !r.enviada).length;
+  if(porEnviar) lista.push({nivel:'info', aba:'mensal', txt:porEnviar + ' aula(s) do mês com escala por enviar', det:'Marque "enviada" depois de mandar ao grupo'});
+  return lista;
+}
+
+function renderCards(){
+  const hoje = todayMidnight();
+  const hojeISO = isoLocal(hoje);
+  const proximas = state.escala.filter(r => statusOf(r)==='A Realizar').slice().sort((a,b)=>a.data.localeCompare(b.data));
+  const ym = hojeISO.slice(0,7);
+  const doMes = state.escala.filter(r => (r.data||'').slice(0,7)===ym);
+  const realMes = doMes.filter(r=>statusOf(r)==='Realizada').length;
+  const pendMes = doMes.filter(r=>statusOf(r)==='A Realizar').length;
+  const ativos = state.professores.filter(p=>p.ativo).length;
+  const porEnviar = doMes.filter(r => !r.enviada).length;
+
+  // semana atual (domingo a sábado)
+  const ini = inicioSemana(hoje);
+  const fimSem = new Date(ini); fimSem.setDate(fimSem.getDate()+6);
+  const daSemana = state.escala.filter(r => r.data && r.data >= isoLocal(ini) && r.data <= isoLocal(fimSem));
+  const semanaPend = daSemana.filter(r => statusOf(r)==='A Realizar').length;
+
+  /* --- destaque: próxima aula (todas as classes do mesmo dia) --- */
+  let hero;
   if(proximas.length){
-    const p = proximas[0];
-    nextHtml = `<div class="nextcard">
-      <div class="tag">Próxima aula</div>
-      <div class="main">${fmtDate(p.data)} · ${escHtml(capitalize(diaSemana(p.data)))} · ${escHtml(p.classe)}</div>
-      <div class="info">Titular: <strong>${escHtml(p.titular)||'—'}</strong> · Substituto: <strong>${escHtml(p.substituto)||'—'}</strong>${p.tema?' · Tema: '+escHtml(p.tema):''}</div>
-    </div>`;
+    const dia = proximas[0].data;
+    const doDia = proximas.filter(r => r.data === dia);
+    const n = diasAte(dia);
+    hero = `<div class="tag">Próxima aula</div>
+      <div class="quando">${escHtml(textoQuando(n))}</div>
+      <div class="dataext">${escHtml(capitalize(diaSemana(dia)))}, ${fmtDate(dia)}</div>
+      <div class="aulas">${doDia.map(r => `
+        <div class="aula">
+          <div class="cl">${escHtml(r.classe)}</div>
+          <div class="pessoas">
+            <span><i class="avatar">${escHtml(iniciais(r.titular))}</i><span>Titular: <strong>${escHtml(r.titular)||'—'}</strong></span></span>
+            <span><i class="avatar">${escHtml(iniciais(r.substituto))}</i><span>Substituto: <strong>${escHtml(r.substituto)||'—'}</strong></span></span>
+          </div>
+          ${r.tema ? '<div class="tema">Tema: ' + escHtml(r.tema) + '</div>' : ''}
+        </div>`).join('')}
+      </div>
+      <div class="acoes"><button onclick="irParaAba('mensal')">Abrir escala mensal</button><button onclick="irParaAba('arealizar')">Ver aulas a realizar</button></div>`;
   } else {
-    nextHtml = `<div class="nextcard"><div class="tag">Próxima aula</div><div class="main">Nenhuma aula agendada</div></div>`;
+    hero = `<div class="tag">Próxima aula</div><div class="quando">Nenhuma aula agendada</div>
+      <div class="vazio">Gere a escala do próximo mês para ver os próximos compromissos aqui.</div>
+      <div class="acoes"><button onclick="irParaAba('mensal')">Ir para a escala mensal</button></div>`;
   }
-  document.getElementById('cardsRow').innerHTML = nextHtml + `
-    <div class="card"><div class="lbl">Professores ativos</div><div class="val">${ativos}</div><div class="sub">de ${state.professores.length} cadastrados</div></div>
-    <div class="card"><div class="lbl">Aulas realizadas (mês atual)</div><div class="val">${doMesRealizadas.length}</div><div class="sub">${faltaEnviar} aula(s) por enviar no mês</div></div>
-    <div class="card"><div class="lbl">Aulas a realizar (mês atual)</div><div class="val">${doMesPendentes.length}</div><div class="sub">restantes no mês</div></div>
-    <div class="card"><div class="lbl">Total no histórico</div><div class="val">${state.escala.length}</div><div class="sub">${realizadas.length} realizadas · ${proximas.length} a realizar</div></div>
-  `;
+  document.getElementById('dHero').innerHTML = hero;
+
+  /* --- progresso do mês (anel) --- */
+  const total = doMes.length;
+  const pct = total ? Math.round(realMes / total * 100) : 0;
+  const R = 46, C = 2 * Math.PI * R;
+  const nomeMes = capitalize(hoje.toLocaleDateString('pt-BR', {month:'long', year:'numeric'}));
+  document.getElementById('dProg').innerHTML = `
+    <h3>${escHtml(nomeMes)}</h3>
+    <div class="ringbox">
+      <svg class="ring" viewBox="0 0 112 112" role="img" aria-label="${pct}% das aulas do mês realizadas">
+        <circle class="trilho" cx="56" cy="56" r="${R}" fill="none" stroke-width="11"/>
+        <circle class="valor" cx="56" cy="56" r="${R}" fill="none" stroke-width="11" stroke-linecap="round"
+          stroke-dasharray="${(C*pct/100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 56 56)"/>
+        <text x="56" y="54" text-anchor="middle" font-size="22" font-weight="700">${pct}%</text>
+        <text x="56" y="71" text-anchor="middle" font-size="10" style="fill:var(--muted)">realizadas</text>
+      </svg>
+      <div class="legenda">
+        <div><i style="background:var(--green-d)"></i>Realizadas<b>${realMes}</b></div>
+        <div><i style="background:var(--yellow-d)"></i>A realizar<b>${pendMes}</b></div>
+        <div><i style="background:#C9C6BA"></i>Total no mês<b>${total}</b></div>
+      </div>
+    </div>`;
+
+  /* --- indicadores --- */
+  const ic = {
+    cal:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>',
+    clock:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    send:'<svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
+    users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="8" r="2.5"/><path d="M16 14.6c2.6.5 4 2.2 4 5.4"/></svg>'
+  };
+  document.getElementById('dKpis').innerHTML = `
+    <div class="kpi"><div class="ico o">${ic.cal}</div><div><div class="num">${daSemana.length}</div><div class="rot">Aulas esta semana</div><div class="sub2">${semanaPend} ainda a realizar</div></div></div>
+    <div class="kpi"><div class="ico b">${ic.clock}</div><div><div class="num">${pendMes}</div><div class="rot">A realizar no mês</div><div class="sub2">${proximas.length} no total à frente</div></div></div>
+    <div class="kpi"><div class="ico ${porEnviar ? 'y' : 'g'}">${ic.send}</div><div><div class="num">${porEnviar}</div><div class="rot">Escalas por enviar</div><div class="sub2">${porEnviar ? 'aulas do mês' : 'tudo enviado'}</div></div></div>
+    <div class="kpi"><div class="ico g">${ic.users}</div><div><div class="num">${ativos}</div><div class="rot">Professores ativos</div><div class="sub2">de ${state.professores.length} cadastrados</div></div></div>`;
+
+  /* --- atenção --- */
+  const alertas = dashAlertas(proximas, doMes, hojeISO);
+  const MAX = 6;
+  document.getElementById('dAlertas').innerHTML = alertas.length
+    ? alertas.slice(0, MAX).map(a => `<div class="alerta ${a.nivel}" onclick="irParaAba('${a.aba}')"><span class="pt"></span><div>${escHtml(a.txt)}<small>${escHtml(a.det)}</small></div></div>`).join('')
+      + (alertas.length > MAX ? `<p class="note" style="margin:8px 0 0">+ ${alertas.length - MAX} outro(s) aviso(s)</p>` : '')
+    : '<div class="alerta ok"><span class="pt"></span><div>Tudo em ordem nos próximos 30 dias.</div></div>';
+
+  /* --- próximas aulas (depois da primeira data) --- */
+  const dia0 = proximas.length ? proximas[0].data : null;
+  const seguintes = proximas.filter(r => r.data !== dia0).slice(0, 6);
+  document.getElementById('dProximas').innerHTML = seguintes.length
+    ? seguintes.map(r => {
+        const dt = parseISO(r.data);
+        return `<div class="proxrow">
+          <div class="datachip"><b>${String(dt.getDate()).padStart(2,'0')}</b><span>${escHtml(dt.toLocaleDateString('pt-BR',{month:'short'}).replace('.',''))}</span></div>
+          <div class="quem"><strong>${escHtml(r.classe)}</strong> · ${escHtml(capitalize(diaSemana(r.data)))}
+            <small>Titular: ${escHtml(r.titular)||'—'}${r.substituto ? ' · Subst.: ' + escHtml(r.substituto) : ''}${r.tema ? ' · ' + escHtml(r.tema) : ''}</small></div>
+          <span class="badge pend">${escHtml(textoQuando(diasAte(r.data)))}</span>
+        </div>`;
+      }).join('')
+    : '<p class="empty">Sem outras aulas agendadas à frente.</p>';
+
+  /* --- rodízio do mês: titulares e substitutos por professor --- */
+  const carga = {};
+  doMes.forEach(r => {
+    if(r.titular){ (carga[r.titular] = carga[r.titular] || {t:0,s:0}).t++; }
+    if(r.substituto){ (carga[r.substituto] = carga[r.substituto] || {t:0,s:0}).s++; }
+  });
+  const nomes = Object.keys(carga).sort((a,b) => (carga[b].t - carga[a].t) || (carga[b].s - carga[a].s) || a.localeCompare(b));
+  const maxT = Math.max(1, ...nomes.map(n => carga[n].t));
+  document.getElementById('dCarga').innerHTML = nomes.length
+    ? nomes.slice(0, 8).map(n => `<div class="barra"><span class="nm" title="${escAttr(n)}">${escHtml(n)}</span>
+        <span class="tr"><i style="width:${Math.round(carga[n].t / maxT * 100)}%"></i></span>
+        <span class="ct">${carga[n].t} tit. · ${carga[n].s} sub.</span></div>`).join('')
+    : '<p class="empty">Sem aulas neste mês.</p>';
+
+  /* --- próximos domingos: EBD e ajudantes --- */
+  const doms = [];
+  const d0 = new Date(hoje); d0.setDate(d0.getDate() + ((7 - d0.getDay()) % 7));
+  for(let i = 0; i < 4; i++){ const d = new Date(d0); d.setDate(d.getDate() + 7*i); doms.push(isoLocal(d)); }
+  document.getElementById('dDomingos').innerHTML = doms.map(d => {
+    const x = dominicalDe(d);
+    const temAula = state.escala.some(r => r.data === d);
+    return `<div class="dombox"><div class="dd">${fmtDate(d)}${temAula ? '' : ' <span style="font-weight:400;color:var(--muted)">· sem aula</span>'}</div>
+      <div class="lb">EBD</div><div>${x.ebd ? escHtml(x.ebd) : '<span class="vz">não definido</span>'}</div>
+      <div class="lb">Ajudante</div><div>${x.ajudante ? escHtml(x.ajudante) : '<span class="vz">não definido</span>'}</div></div>`;
+  }).join('');
 }
 
 function chartMensagem(idWrap, texto){
