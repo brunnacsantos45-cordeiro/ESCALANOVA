@@ -219,6 +219,23 @@
   .visgrid .chartwrap{height:300px;}
   @media (max-width:1000px){ .visgrid{grid-template-columns:minmax(0,1fr);} .periodobar .rot{margin-left:0;width:100%;} }
 
+  /* ---------- Atenção: borda grossa onde há problema ---------- */
+  .campoalerta{border-width:3px !important;border-style:solid !important;}
+  .campoalerta.erro{border-color:#C0392B !important;box-shadow:0 0 0 3px rgba(192,57,43,.15);}
+  .campoalerta.aviso{border-color:#E6A100 !important;box-shadow:0 0 0 3px rgba(230,161,0,.18);}
+  .campoalerta.info{border-color:#155E9E !important;box-shadow:0 0 0 3px rgba(21,94,158,.15);}
+  input[type=checkbox].campoalerta{outline-style:solid;outline-width:3px;outline-offset:2px;border:none !important;box-shadow:none !important;border-radius:3px;}
+  input[type=checkbox].campoalerta.erro{outline-color:#C0392B;}
+  input[type=checkbox].campoalerta.aviso{outline-color:#E6A100;}
+  input[type=checkbox].campoalerta.info{outline-color:#155E9E;}
+  td.celalerta{border-radius:6px;}
+  td.celalerta.erro{box-shadow:inset 0 0 0 3px #C0392B;}
+  td.celalerta.aviso{box-shadow:inset 0 0 0 3px #E6A100;}
+  td.celalerta.info{box-shadow:inset 0 0 0 3px #155E9E;}
+  @keyframes piscar{0%,100%{background-color:transparent;}20%,60%{background-color:#FFD9A8;}}
+  tr.linha-destaque td{animation:piscar 2.6s ease;}
+  .alerta .ir{display:inline-block;margin-top:3px;font-size:11px;font-weight:600;text-decoration:underline;opacity:.9;}
+
   /* ---------- Início: agenda dos próximos 21 dias ---------- */
   [hidden]{display:none !important;}
   .avatar.av{width:24px;height:24px;font-size:10px;background:var(--orange-l);color:var(--orange-dd);}
@@ -874,21 +891,21 @@ function renderMensal(){
     const pool = activeTeachers(r.classe);
     const st = statusOf(r);
     const badgeClass = st==='Realizada' ? 'real' : 'pend';
-    html += `<tr>
+    html += `<tr data-aula="${i}">
       <td><select onchange="updateFieldAndRerender(${i},'classe',this.value)">
         <option value="Classe 2-5" ${r.classe==='Classe 2-5'?'selected':''}>Classe 2-5</option>
         <option value="Classe 6-11" ${r.classe==='Classe 6-11'?'selected':''}>Classe 6-11</option>
       </select></td>
-      <td><input type="date" value="${r.data||''}" onchange="updateFieldAndRerender(${i},'data',this.value)"></td>
+      <td><input type="date"${attrAlerta(r,'data')} value="${r.data||''}" onchange="updateFieldAndRerender(${i},'data',this.value)"></td>
       <td>${ehDomingo(r.data)
         ? `<select onchange="setDominical('${r.data}','ebd',this.value)" title="EBD é turma única: o nome vale para as duas classes.">${teacherOptions(dominicalDe(r.data).ebd, todasProfessoras())}</select>`
         : '<span class="semvaga">—</span>'}</td>
-      <td><select onchange="updateField(${i},'titular',this.value)">${teacherOptions(r.titular, pool)}</select></td>
-      <td><select onchange="updateField(${i},'substituto',this.value)">${teacherOptions(r.substituto, pool)}</select></td>
+      <td><select${attrAlerta(r,'titular')} onchange="updateFieldAndRerender(${i},'titular',this.value)">${teacherOptions(r.titular, pool)}</select></td>
+      <td><select${attrAlerta(r,'substituto')} onchange="updateFieldAndRerender(${i},'substituto',this.value)">${teacherOptions(r.substituto, pool)}</select></td>
       <td>${ehDomingo(r.data)
-        ? `<select onchange="setDominical('${r.data}','ajudante',this.value)" title="Um ajudante por domingo, cobrindo as duas classes.">${ajudanteOptions(dominicalDe(r.data).ajudante, r.data)}</select>`
+        ? `<select${attrAlerta(r,'ajudante')} onchange="setDominical('${r.data}','ajudante',this.value)" title="Um ajudante por domingo, cobrindo as duas classes.">${ajudanteOptions(dominicalDe(r.data).ajudante, r.data)}</select>`
         : '<span class="semvaga">—</span>'}</td>
-      <td style="text-align:center"><input type="checkbox" class="chkenv" ${r.enviada?'checked':''} onchange="updateFieldAndRerender(${i},'enviada',this.checked)" title="Marque quando a aula já tiver sido enviada à professora."></td>
+      <td style="text-align:center"><input type="checkbox" class="chkenv${clsAlerta(r,'enviada')}" data-campo="enviada" ${r.enviada?'checked':''} onchange="updateFieldAndRerender(${i},'enviada',this.checked)" title="Marque quando a aula já tiver sido enviada à professora."></td>
       <td>
         <select class="statusSel" onchange="updateFieldAndRerender(${i},'statusManual',this.value)" title="Automático segue a data; escolha manualmente para marcar a aula como realizada ou não.">
           <option value="" ${!statusEhManual(r)?'selected':''}>Automático (${st})</option>
@@ -921,7 +938,7 @@ function renderArealizar(){
     html += `<tr><td colspan="8" class="empty">Nenhuma aula pendente.</td></tr>`;
   }
   rowsWithIdx.forEach(({r,i}) => {
-    html += `<tr>
+    html += `<tr data-aula="${i}">
       <td>${escHtml(r.classe)}</td><td>${fmtDate(r.data)}</td>
       <td title="Calculado a partir da data — altere a data para mudar o dia.">${escHtml(capitalize(diaSemana(r.data)))}</td>
       <td>
@@ -931,7 +948,7 @@ function renderArealizar(){
           <option value="PG" ${r.tipoManual==='PG'?'selected':''}>PG</option>
         </select>
       </td>
-      <td>${escHtml(r.titular)}</td><td>${escHtml(r.substituto)}</td>
+      <td${celAlerta(r,'titular')}>${escHtml(r.titular)}</td><td${celAlerta(r,'substituto')}>${escHtml(r.substituto)}</td>
       <td><input type="text" value="${escAttr(r.tema)}" placeholder="a definir" oninput="updateField(${i},'tema',this.value)" onblur="renderAll()"></td>
       <td><input type="text" value="${escAttr(r.obs)}" oninput="updateField(${i},'obs',this.value)" onblur="renderAll()"></td>
     </tr>`;
@@ -964,13 +981,13 @@ function renderProf(){
   let html = `<p class="note">As restrições abaixo são respeitadas pelo sorteio do rodízio. <strong>Só domingo</strong>: nunca cai em quarta, nem como titular nem como substituto. <strong>Só quarta</strong>: o inverso, nunca cai em domingo (os dois não podem ficar marcados juntos). <strong>Reserva</strong>: pode ser escalada como substituta na <em>outra</em> classe, mas só quando não houver substituta suficiente nela (respeitando o \"Não pode em\" dela e sem coincidir com a aula dela na própria classe). <strong>Máx. titular</strong> e <strong>máx. subst.</strong>: teto de aulas no mês em cada papel (vazio = sem limite). <strong>Não pode em</strong>: datas soltas separadas por vírgula, no formato DD/MM/AAAA.</p>
   <table class="prof"><thead><tr><th>Classe</th><th>Nome</th><th>Ativo</th><th>Só domingo</th><th>Só quarta</th><th>Reserva</th><th>Máx. titular</th><th>Máx. subst.</th><th>Não pode em</th><th></th></tr></thead><tbody>`;
   state.professores.forEach((p,i) => {
-    html += `<tr>
+    html += `<tr data-prof="${i}">
       <td><select onchange="updateProfField(${i},'classe',this.value)">
         <option value="Classe 2-5" ${p.classe==='Classe 2-5'?'selected':''}>Classe 2-5</option>
         <option value="Classe 6-11" ${p.classe==='Classe 6-11'?'selected':''}>Classe 6-11</option>
       </select></td>
       <td><input type="text" value="${escAttr(p.nome)}" oninput="updateProfFieldSilent(${i},'nome',this.value)" onblur="renderAll()"></td>
-      <td style="text-align:center"><input type="checkbox" ${p.ativo?'checked':''} onchange="updateProfField(${i},'ativo',this.checked)"></td>
+      <td style="text-align:center"><input type="checkbox" data-campo="ativo"${profInativoEmUso(p) ? ' class="campoalerta aviso"' : ''} ${p.ativo?'checked':''} onchange="updateProfField(${i},'ativo',this.checked)"></td>
       <td style="text-align:center"><input type="checkbox" ${p.soDomingo?'checked':''} onchange="setSoDia(${i},'soDomingo',this.checked)"></td>
       <td style="text-align:center"><input type="checkbox" ${p.soQuarta?'checked':''} onchange="setSoDia(${i},'soQuarta',this.checked)"></td>
       <td style="text-align:center"><input type="checkbox" ${p.reserva?'checked':''} onchange="updateProfField(${i},'reserva',this.checked)" title="Pode ser escalada como substituta na outra classe, só quando faltar substituta lá."></td>
@@ -1124,35 +1141,115 @@ function textoQuando(n){
   return 'Em ' + n + ' dias';
 }
 
+/* ---------- Atenção: análise por aula, borda nos campos e atalho para corrigir ---------- */
+function limiteAtencaoISO(){
+  return isoLocal(new Date(todayMidnight().getTime() + 30*86400000));
+}
+
+// Problemas de uma aula (mesmos critérios do quadro Atenção): campo, nível e texto.
+function analisarAula(r){
+  const p = [];
+  if(!r.data){ p.push({campo:'data', nivel:'aviso', txt:'Aula sem data'}); return p; }
+  if(statusOf(r) !== 'A Realizar' || r.data > limiteAtencaoISO()) return p;
+  if(!r.titular) p.push({campo:'titular', nivel:'erro', txt:'Sem titular'});
+  else if(!profByName(r.classe, r.titular).nome) p.push({campo:'titular', nivel:'aviso', txt:r.titular + ' não está no cadastro'});
+  if(!r.substituto) p.push({campo:'substituto', nivel:'aviso', txt:'Sem substituto'});
+  else if(r.substituto === r.titular) p.push({campo:'substituto', nivel:'erro', txt:'Titular e substituto são a mesma pessoa'});
+  if(ehDomingo(r.data) && !dominicalDe(r.data).ajudante) p.push({campo:'ajudante', nivel:'info', txt:'Domingo sem ajudante'});
+  return p;
+}
+
+function enviadaPendente(r){
+  return (r.data || '').slice(0,7) === isoLocal(todayMidnight()).slice(0,7) && !r.enviada;
+}
+
+function nivelCampo(r, campo){
+  if(campo === 'enviada') return enviadaPendente(r) ? 'info' : '';
+  const p = analisarAula(r).find(x => x.campo === campo);
+  return p ? p.nivel : '';
+}
+
+// pedaços de HTML que marcam o campo com a borda grossa enquanto houver problema
+function attrAlerta(r, campo){
+  const n = nivelCampo(r, campo);
+  return ' data-campo="' + campo + '"' + (n ? ' class="campoalerta ' + n + '"' : '');
+}
+function clsAlerta(r, campo){
+  const n = nivelCampo(r, campo);
+  return n ? ' campoalerta ' + n : '';
+}
+function celAlerta(r, campo){
+  const n = nivelCampo(r, campo);
+  return ' data-campo="' + campo + '"' + (n ? ' class="celalerta ' + n + '"' : '');
+}
+
+// Professor inativo que ainda é titular em aula dos próximos 30 dias
+function profInativoEmUso(p){
+  if(p.ativo !== false) return false;
+  return state.escala.some(r => r.titular === p.nome && r.classe === p.classe
+    && statusOf(r) === 'A Realizar' && r.data <= limiteAtencaoISO());
+}
+
+let alertasAtuais = [];
+
 function dashAlertas(proximas, doMes, hojeISO){
   const lista = [];
-  const limite = isoLocal(new Date(todayMidnight().getTime() + 30*86400000));
-  const proximos30 = proximas.filter(r => r.data <= limite);
+  const proximos30 = proximas.filter(r => r.data <= limiteAtencaoISO());
 
   proximos30.forEach(r => {
     const rot = fmtDate(r.data) + ' · ' + r.classe;
-    if(!r.titular) lista.push({nivel:'erro', aba:'mensal', txt:'Sem titular', det:rot});
-    else {
+    const linha = state.escala.indexOf(r);
+    analisarAula(r).forEach(pb => {
+      if(pb.campo === 'ajudante') return;
+      lista.push({nivel:pb.nivel, aba:'mensal', linha, campo:pb.campo, txt:pb.txt, det:rot});
+    });
+    if(r.titular){
       const p = profByName(r.classe, r.titular);
-      if(!p.nome) lista.push({nivel:'aviso', aba:'prof', txt:r.titular + ' não está no cadastro', det:rot});
-      else if(p.ativo === false) lista.push({nivel:'aviso', aba:'prof', txt:r.titular + ' está inativo(a)', det:rot});
+      if(p.nome && p.ativo === false) lista.push({nivel:'aviso', aba:'prof', prof:state.professores.indexOf(p), campo:'ativo', txt:r.titular + ' está inativo(a)', det:rot});
     }
-    if(!r.substituto) lista.push({nivel:'aviso', aba:'mensal', txt:'Sem substituto', det:rot});
-    else if(r.substituto === r.titular) lista.push({nivel:'erro', aba:'mensal', txt:'Titular e substituto são a mesma pessoa', det:rot});
   });
 
   // domingos com aula nos próximos 30 dias e sem ajudante definido
   const doms = [...new Set(proximos30.filter(r => ehDomingo(r.data)).map(r => r.data))];
   doms.forEach(d => {
-    if(!dominicalDe(d).ajudante) lista.push({nivel:'info', aba:'mensal', txt:'Domingo sem ajudante', det:fmtDate(d)});
+    if(!dominicalDe(d).ajudante){
+      const ref = proximos30.find(r => r.data === d);
+      lista.push({nivel:'info', aba:'mensal', linha:state.escala.indexOf(ref), campo:'ajudante', txt:'Domingo sem ajudante', det:fmtDate(d)});
+    }
   });
 
-  const semData = state.escala.filter(r => !r.data).length;
-  if(semData) lista.push({nivel:'aviso', aba:'mensal', txt:semData + ' aula(s) sem data', det:'Preencha na Escala Mensal'});
+  const semDataLista = state.escala.filter(r => !r.data);
+  if(semDataLista.length) lista.push({nivel:'aviso', aba:'mensal', linha:state.escala.indexOf(semDataLista[0]), campo:'data', todos:true, txt:semDataLista.length + ' aula(s) sem data', det:'Preencha na Escala Mensal'});
 
-  const porEnviar = doMes.filter(r => !r.enviada).length;
-  if(porEnviar) lista.push({nivel:'info', aba:'mensal', txt:porEnviar + ' aula(s) do mês com escala por enviar', det:'Marque "enviada" depois de mandar ao grupo'});
+  const faltaEnviar = doMes.filter(r => !r.enviada);
+  if(faltaEnviar.length) lista.push({nivel:'info', aba:'mensal', linha:state.escala.indexOf(faltaEnviar[0]), campo:'enviada', txt:faltaEnviar.length + ' aula(s) do mês com escala por enviar', det:'Marque "enviada" depois de mandar ao grupo'});
   return lista;
+}
+
+// Clique no aviso: abre a aba, mostra a linha, pisca e coloca o cursor no campo a corrigir.
+function irParaAlerta(n){
+  const a = alertasAtuais[n];
+  if(!a) return;
+  if(a.aba === 'mensal'){
+    const r = state.escala[a.linha];
+    if(!r) return;
+    filtroMes = a.todos || !r.data ? 'todos' : r.data.slice(0,7);
+    const fc = document.getElementById('filtroClasseMensal'); if(fc) fc.value = '';
+    const fs = document.getElementById('filtroStatusMensal'); if(fs) fs.value = '';
+    renderMensal();
+  }
+  irParaAba(a.aba);
+  const seletor = a.aba === 'prof' ? 'tr[data-prof="' + a.prof + '"]' : 'tr[data-aula="' + a.linha + '"]';
+  // espera o menu recolher e o painel aparecer antes de rolar
+  setTimeout(() => {
+    const tr = document.querySelector(seletor);
+    if(!tr) return;
+    tr.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
+    tr.classList.remove('linha-destaque'); void tr.offsetWidth; tr.classList.add('linha-destaque');
+    const campo = tr.querySelector('[data-campo="' + a.campo + '"]');
+    if(campo){ try{ campo.focus({preventScroll:true}); }catch(err){ campo.focus(); } }
+    setTimeout(() => tr.classList.remove('linha-destaque'), 3000);
+  }, 380);
 }
 
 function renderCards(){
@@ -1213,11 +1310,11 @@ function renderCards(){
     <div class="kpi"><div class="ico g">${ic.users}</div><div><div class="num">${ativos}</div><div class="rot">Professores ativos</div><div class="sub2">de ${state.professores.length} cadastrados</div></div></div>`;
 
   /* --- atenção --- */
-  const alertas = dashAlertas(proximas, doMes, hojeISO);
+  alertasAtuais = dashAlertas(proximas, doMes, hojeISO);
   const MAX = 6;
-  document.getElementById('dAlertas').innerHTML = alertas.length
-    ? alertas.slice(0, MAX).map(a => `<div class="alerta ${a.nivel}" onclick="irParaAba('${a.aba}')"><span class="pt"></span><div>${escHtml(a.txt)}<small>${escHtml(a.det)}</small></div></div>`).join('')
-      + (alertas.length > MAX ? `<p class="note" style="margin:8px 0 0">+ ${alertas.length - MAX} outro(s) aviso(s)</p>` : '')
+  document.getElementById('dAlertas').innerHTML = alertasAtuais.length
+    ? alertasAtuais.slice(0, MAX).map((a, n) => `<div class="alerta ${a.nivel}" onclick="irParaAlerta(${n})" title="Clique para ir direto ao ponto a corrigir"><span class="pt"></span><div>${escHtml(a.txt)}<small>${escHtml(a.det)}</small><span class="ir">Corrigir →</span></div></div>`).join('')
+      + (alertasAtuais.length > MAX ? `<p class="note" style="margin:8px 0 0">+ ${alertasAtuais.length - MAX} outro(s) aviso(s)</p>` : '')
     : '<div class="alerta ok"><span class="pt"></span><div>Tudo em ordem nos próximos 30 dias.</div></div>';
 
   /* --- agenda dos próximos 21 dias --- */
