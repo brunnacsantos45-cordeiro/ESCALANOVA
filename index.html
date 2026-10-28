@@ -236,6 +236,34 @@
   tr.linha-destaque td{animation:piscar 2.6s ease;}
   .alerta .ir{display:inline-block;margin-top:3px;font-size:11px;font-weight:600;text-decoration:underline;opacity:.9;}
 
+  /* ---------- Escala Mensal: salvar edições e colunas ajustadas ---------- */
+  .naosalvo{background:#FFF8DC !important;outline:2px dashed #E6A100;outline-offset:1px;}
+  input[type=checkbox].naosalvo{background:none !important;}
+  .pendentes{font-size:12px;font-weight:600;color:var(--yellow-d);background:var(--yellow-l);border-radius:20px;padding:4px 10px;}
+  #btnSalvarMensal:disabled{opacity:.55;cursor:default;}
+  .mensalvalid{background:#F7E7E3;border:1px solid #E3B9AE;color:#8B2E14;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;}
+  .mensalvalid ul{margin:6px 0 0;padding-left:18px;}
+  tr.linha-nova td{background:#FFFBEF;}
+  .sidebar-nav .tab.pendente{position:relative;}
+  .sidebar-nav .tab.pendente::after{content:"";position:absolute;right:10px;top:50%;margin-top:-4px;width:8px;height:8px;border-radius:50%;background:#FFC24D;}
+  .tbcard table.mensal{width:max-content;min-width:0;margin:0 auto;}
+  .tbcard table.mensal th,.tbcard table.mensal td{text-align:center;white-space:nowrap;padding:9px 12px;}
+  .tbcard table.mensal td select,.tbcard table.mensal td input:not([type=checkbox]){width:auto;min-width:0;text-align:center;text-align-last:center;}
+  .tablescroll table.mensal{min-width:0;}
+  @media (max-width:720px){ .tablescroll table.mensal{min-width:0;} }
+
+  /* ---------- Professores: colunas ajustadas e centralizadas ---------- */
+  .tbcard table.prof{width:max-content;min-width:0;margin:0 auto;}
+  .tbcard table.prof th,.tbcard table.prof td{text-align:center;white-space:nowrap;padding:9px 8px;}
+  .tbcard table.prof td select,.tbcard table.prof td input:not([type=checkbox]){width:auto;min-width:0;text-align:center;text-align-last:center;}
+  .tbcard table.prof td input.in-nome{width:150px;}
+  .tbcard table.prof td input.in-num{width:70px;}
+  .tbcard table.prof td input.in-indisp{width:230px;}
+  .tablescroll table.prof{min-width:0;}
+  #panel-prof .tbcard h3{text-align:center;}
+  #panel-prof .tbcard .note{text-align:center;}
+  #panel-prof .toolbar{justify-content:center;}
+
   /* ---------- Início: agenda dos próximos 21 dias ---------- */
   [hidden]{display:none !important;}
   .avatar.av{width:24px;height:24px;font-size:10px;background:var(--orange-l);color:var(--orange-dd);}
@@ -509,7 +537,7 @@
         <option value="Classe 6-11">Somente Classe 6-11</option>
       </select>
       <button class="primary" onclick="previewGenerate()">Gerar rodízio (pré-visualizar)</button>
-      <button onclick="addRow()">+ Adicionar aula manualmente</button>
+      <button onclick="mAdicionar()">+ Adicionar aula manualmente</button>
     </div>
     <div id="genPreviewWrap"></div>
     <div class="toolbar" style="border-top:1px dashed var(--line);padding-top:12px">
@@ -531,7 +559,11 @@
         <option value="Realizada">Realizada</option>
         <option value="A Realizar">A Realizar</option>
       </select>
+      <button class="primary" id="btnSalvarMensal" onclick="mSalvar()" disabled>Salvar edições</button>
+      <button id="btnDescartarMensal" onclick="mDescartar()" hidden>Descartar</button>
+      <span class="pendentes" id="mensalPendentes" hidden></span>
     </div>
+    <div class="mensalvalid" id="mensalValidacao" hidden></div>
     <p class="note">Edite os campos direto na tabela. Para <strong>travar</strong> uma aula já combinada, cadastre-a antes (botão "+ Adicionar aula manualmente") — o sorteio pula datas que já existem na escala. A coluna <strong>Status</strong> vem no automático (calculado pela data), mas você pode marcar manualmente "Realizada" ou "A Realizar" — útil quando a aula foi cancelada ou aconteceu fora do previsto. Dia da semana, tipo (GG/PG), tema/lição e observações não aparecem mais aqui — edite-os na aba <strong>Aulas a Realizar</strong>.</p>
     <div id="mensalTableWrap"></div>
   </div>
@@ -548,8 +580,12 @@
 
   <div class="panel" id="panel-prof">
     <div class="toolbar">
-      <button onclick="addProfessor()">+ Adicionar professor</button>
+      <button onclick="pAdicionar()">+ Adicionar professor</button>
+      <button class="primary" id="btnSalvarProf" onclick="pSalvar()" disabled>Salvar edições</button>
+      <button id="btnDescartarProf" onclick="pDescartar()" hidden>Descartar</button>
+      <span class="pendentes" id="profPendentes" hidden></span>
     </div>
+    <div class="mensalvalid" id="profValidacao" hidden></div>
     <div id="profTableWrap"></div>
   </div>
 
@@ -866,15 +902,180 @@ function preencherFiltroMes(){
     meses.map(m => `<option value="${m}"${m===filtroMes?' selected':''}>${rotuloMes(m)}${m===atual?' (atual)':''}</option>`).join('');
 }
 
+/* ---------- Escala Mensal: edições em rascunho, validadas e gravadas só em "Salvar edições" ---------- */
+const mDraft = {edits:{}, removed:new Set(), added:[], dom:{}};
+
+function mContagem(){
+  let n = mDraft.removed.size + mDraft.added.length;
+  Object.values(mDraft.edits).forEach(e => { n += Object.keys(e).length; });
+  Object.values(mDraft.dom).forEach(d => { n += Object.keys(d).length; });
+  return n;
+}
+
+// "ref" é o índice da aula salva em state.escala (número) ou "n<k>" para aula nova ainda em rascunho
+function mLinha(ref){
+  if(typeof ref === 'string') return {r: mDraft.added[Number(ref.slice(1))], nova: true};
+  return {r: state.escala[ref], nova: false};
+}
+
+function mVista(r){
+  return Object.assign({}, r, mDraft.edits[r._id] || {});
+}
+
+function mDomVista(iso){
+  return Object.assign({}, dominicalDe(iso), mDraft.dom[iso] || {});
+}
+
+function mAtualizarBarra(){
+  const n = mContagem();
+  const salvar = document.getElementById('btnSalvarMensal');
+  const descartar = document.getElementById('btnDescartarMensal');
+  const info = document.getElementById('mensalPendentes');
+  if(salvar){ salvar.disabled = n === 0; salvar.textContent = n ? 'Salvar edições (' + n + ')' : 'Salvar edições'; }
+  if(descartar) descartar.hidden = n === 0;
+  if(info){ info.hidden = n === 0; info.textContent = n + (n === 1 ? ' edição não salva' : ' edições não salvas'); }
+  const tab = document.querySelector('.sidebar-nav .tab[data-tab="mensal"]');
+  if(tab) tab.classList.toggle('pendente', n > 0);
+}
+
+function mEdit(ref, campo, valor, refazer, el){
+  const {r, nova} = mLinha(ref);
+  if(!r) return;
+  if(nova){
+    r[campo] = valor;
+  } else {
+    const e = mDraft.edits[r._id] = mDraft.edits[r._id] || {};
+    if((r[campo] ?? '') === (valor ?? '')) delete e[campo]; else e[campo] = valor;
+    if(!Object.keys(e).length) delete mDraft.edits[r._id];
+    if(el) el.classList.toggle('naosalvo', campo in (mDraft.edits[r._id] || {}));
+  }
+  mAtualizarBarra();
+  if(refazer) renderMensal();
+}
+
+function mEditDom(iso, campo, valor){
+  const d = mDraft.dom[iso] = mDraft.dom[iso] || {};
+  if((dominicalDe(iso)[campo] || '') === (valor || '')) delete d[campo]; else d[campo] = valor;
+  if(!Object.keys(d).length) delete mDraft.dom[iso];
+  mAtualizarBarra();
+  renderMensal();
+}
+
+function mRemover(ref){
+  if(!confirm('Remover esta aula da escala? A remoção só vale ao clicar em "Salvar edições".')) return;
+  const {r, nova} = mLinha(ref);
+  if(!r) return;
+  if(nova) mDraft.added.splice(Number(ref.slice(1)), 1); else mDraft.removed.add(r._id);
+  mAtualizarBarra();
+  renderMensal();
+}
+
+function mAdicionar(){
+  const classe = 'Classe 2-5';
+  const pool = activeTeachers(classe);
+  mDraft.added.push({_id:'n:' + Math.random().toString(36).slice(2, 10), classe, data:'', titular:pool[0]||'', substituto:pool[1]||'', tema:'', enviada:false, obs:'', statusManual:''});
+  filtroMes = 'todos';
+  const fc = document.getElementById('filtroClasseMensal'); if(fc) fc.value = '';
+  const fs = document.getElementById('filtroStatusMensal'); if(fs) fs.value = '';
+  mAtualizarBarra();
+  renderMensal();
+  const linhas = document.querySelectorAll('#mensalTableWrap tr.linha-nova');
+  const ultima = linhas[linhas.length - 1];
+  if(ultima) ultima.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function mDescartar(){
+  if(!mContagem()) return;
+  if(!confirm('Descartar as ' + mContagem() + ' edição(ões) não salva(s)? As aulas voltam ao que estava salvo.')) return;
+  mLimpar();
+  renderMensal();
+}
+
+function mLimpar(){
+  mDraft.edits = {}; mDraft.removed = new Set(); mDraft.added = []; mDraft.dom = {};
+  mAtualizarBarra();
+}
+
+// Valida só as aulas que você mexeu (editadas ou novas). Vermelho impede salvar; o resto é aviso.
+function mValidar(){
+  const erros = [], avisos = [];
+  const tocadas = [];
+  state.escala.forEach(r => { if(!mDraft.removed.has(r._id) && mDraft.edits[r._id]) tocadas.push(mVista(r)); });
+  mDraft.added.forEach(r => tocadas.push(r));
+  tocadas.forEach(r => {
+    const rot = (r.data ? fmtDate(r.data) : 'sem data') + ' · ' + r.classe;
+    if(!r.titular) erros.push(rot + ': sem titular');
+    else if(r.substituto && r.substituto === r.titular) erros.push(rot + ': titular e substituto são a mesma pessoa');
+    else if(!profByName(r.classe, r.titular).nome) avisos.push(rot + ': ' + r.titular + ' não está no cadastro');
+    if(!r.substituto) avisos.push(rot + ': sem substituto');
+    if(!r.data) avisos.push(rot + ': aula sem data');
+    else if(ehDomingo(r.data) && !mDomVista(r.data).ajudante) avisos.push(rot + ': domingo sem ajudante');
+  });
+  return {erros, avisos};
+}
+
+function mMostrarValidacao(erros){
+  const box = document.getElementById('mensalValidacao');
+  if(!box) return;
+  box.hidden = erros.length === 0;
+  box.innerHTML = erros.length
+    ? '<strong>Corrija antes de salvar:</strong><ul>' + erros.map(e => '<li>' + escHtml(e) + '</li>').join('') + '</ul>'
+    : '';
+}
+
+function mSalvar(){
+  if(!mContagem()) return;
+  const {erros, avisos} = mValidar();
+  mMostrarValidacao(erros);
+  if(erros.length) return;
+  if(avisos.length && !confirm('Há avisos:\n\n• ' + avisos.join('\n• ') + '\n\nSalvar mesmo assim?')) return;
+
+  state.escala.forEach(r => { const e = mDraft.edits[r._id]; if(e) Object.assign(r, e); });
+  state.escala = state.escala.filter(r => !mDraft.removed.has(r._id));
+  mDraft.added.forEach(r => state.escala.push(Object.assign({}, r)));
+  if(!state.dominical) state.dominical = {};
+  Object.keys(mDraft.dom).forEach(iso => {
+    state.dominical[iso] = Object.assign({ebd:'', ajudante:''}, state.dominical[iso] || {}, mDraft.dom[iso]);
+  });
+  const n = mContagem();
+  mLimpar();
+  mMostrarValidacao([]);
+  renderAll();
+  marcarSalvo(n + (n === 1 ? ' edição salva' : ' edições salvas'));
+}
+
+window.addEventListener('beforeunload', e => {
+  if(mContagem() > 0 || pContagem() > 0){ e.preventDefault(); e.returnValue = ''; }
+});
+
+// classes dos campos: borda de atenção (aula salva) e marca de "não salvo" (rascunho)
+function mClasses(r, campo, nova, dom){
+  const cl = [];
+  if(!nova){ const n = nivelCampo(r, campo); if(n) cl.push('campoalerta ' + n); }
+  const sujo = dom
+    ? (mDraft.dom[dom] && campo in mDraft.dom[dom])
+    : (nova || (mDraft.edits[r._id] && campo in mDraft.edits[r._id]));
+  if(sujo) cl.push('naosalvo');
+  return cl;
+}
+function mAttr(r, campo, nova, dom){
+  const cl = mClasses(r, campo, nova, dom);
+  return ' data-campo="' + campo + '"' + (cl.length ? ' class="' + cl.join(' ') + '"' : '');
+}
+
 function renderMensal(){
+  MesclaEstado.garantirIds(state);
   preencherFiltroMes();
   const fc = document.getElementById('filtroClasseMensal').value;
   const fs = document.getElementById('filtroStatusMensal').value;
-  const rowsWithIdx = state.escala.map((r,i) => ({r,i}));
-  const filtered = rowsWithIdx.filter(({r}) =>
-    (filtroMes === 'todos' || (r.data||'').slice(0,7) === filtroMes)
-    && (!fc || r.classe===fc) && (!fs || statusOf(r)===fs));
-  filtered.sort((a,b) => (a.r.data||'').localeCompare(b.r.data||''));
+  const salvas = state.escala
+    .map((r,i) => ({r, i, ref:i, v:mVista(r), nova:false}))
+    .filter(x => !mDraft.removed.has(x.r._id));
+  const novas = mDraft.added.map((r,k) => ({r, i:-1, ref:'n' + k, v:r, nova:true}));
+  const filtered = salvas.concat(novas).filter(({v}) =>
+    (filtroMes === 'todos' || (v.data||'').slice(0,7) === filtroMes)
+    && (!fc || v.classe===fc) && (!fs || statusOf(v)===fs));
+  filtered.sort((a,b) => (a.v.data||'').localeCompare(b.v.data||''));
 
   let html = `<table class="mensal"><thead><tr>
     <th>Classe</th><th>Data</th><th>EBD</th><th>Titular</th><th>Substituto</th>
@@ -887,39 +1088,43 @@ function renderMensal(){
       : 'Nenhuma aula em ' + rotuloMes(filtroMes) + '. Gere o rodízio desse mês acima, ou escolha “Todos os meses”.'}</td></tr>`;
   }
 
-  filtered.forEach(({r,i}) => {
-    const pool = activeTeachers(r.classe);
-    const st = statusOf(r);
+  filtered.forEach(({r, i, ref, v, nova}) => {
+    const pool = activeTeachers(v.classe);
+    const st = statusOf(v);
     const badgeClass = st==='Realizada' ? 'real' : 'pend';
-    html += `<tr data-aula="${i}">
-      <td><select onchange="updateFieldAndRerender(${i},'classe',this.value)">
-        <option value="Classe 2-5" ${r.classe==='Classe 2-5'?'selected':''}>Classe 2-5</option>
-        <option value="Classe 6-11" ${r.classe==='Classe 6-11'?'selected':''}>Classe 6-11</option>
+    const q = typeof ref === 'string' ? `'${ref}'` : ref;
+    const dom = ehDomingo(v.data) ? mDomVista(v.data) : null;
+    const diaDom = dom ? v.data : null;
+    html += `<tr ${nova ? 'class="linha-nova" ' : ''}data-aula="${nova ? 'novo' : i}">
+      <td><select${mAttr(r,'classe',nova)} onchange="mEdit(${q},'classe',this.value,true)">
+        <option value="Classe 2-5" ${v.classe==='Classe 2-5'?'selected':''}>Classe 2-5</option>
+        <option value="Classe 6-11" ${v.classe==='Classe 6-11'?'selected':''}>Classe 6-11</option>
       </select></td>
-      <td><input type="date"${attrAlerta(r,'data')} value="${r.data||''}" onchange="updateFieldAndRerender(${i},'data',this.value)"></td>
-      <td>${ehDomingo(r.data)
-        ? `<select onchange="setDominical('${r.data}','ebd',this.value)" title="EBD é turma única: o nome vale para as duas classes.">${teacherOptions(dominicalDe(r.data).ebd, todasProfessoras())}</select>`
+      <td><input type="date"${mAttr(r,'data',nova)} value="${v.data||''}" onchange="mEdit(${q},'data',this.value,true)"></td>
+      <td>${dom
+        ? `<select${mAttr(r,'ebd',nova,diaDom)} onchange="mEditDom('${v.data}','ebd',this.value)" title="EBD é turma única: o nome vale para as duas classes.">${teacherOptions(dom.ebd, todasProfessoras())}</select>`
         : '<span class="semvaga">—</span>'}</td>
-      <td><select${attrAlerta(r,'titular')} onchange="updateFieldAndRerender(${i},'titular',this.value)">${teacherOptions(r.titular, pool)}</select></td>
-      <td><select${attrAlerta(r,'substituto')} onchange="updateFieldAndRerender(${i},'substituto',this.value)">${teacherOptions(r.substituto, pool)}</select></td>
-      <td>${ehDomingo(r.data)
-        ? `<select${attrAlerta(r,'ajudante')} onchange="setDominical('${r.data}','ajudante',this.value)" title="Um ajudante por domingo, cobrindo as duas classes.">${ajudanteOptions(dominicalDe(r.data).ajudante, r.data)}</select>`
+      <td><select${mAttr(r,'titular',nova)} onchange="mEdit(${q},'titular',this.value,false,this)">${teacherOptions(v.titular, pool)}</select></td>
+      <td><select${mAttr(r,'substituto',nova)} onchange="mEdit(${q},'substituto',this.value,false,this)">${teacherOptions(v.substituto, pool)}</select></td>
+      <td>${dom
+        ? `<select${mAttr(r,'ajudante',nova,diaDom)} onchange="mEditDom('${v.data}','ajudante',this.value)" title="Um ajudante por domingo, cobrindo as duas classes.">${ajudanteOptions(dom.ajudante, v.data)}</select>`
         : '<span class="semvaga">—</span>'}</td>
-      <td style="text-align:center"><input type="checkbox" class="chkenv${clsAlerta(r,'enviada')}" data-campo="enviada" ${r.enviada?'checked':''} onchange="updateFieldAndRerender(${i},'enviada',this.checked)" title="Marque quando a aula já tiver sido enviada à professora."></td>
+      <td style="text-align:center"><input type="checkbox" class="chkenv${mClasses(r,'enviada',nova).map(c => ' ' + c).join('')}" data-campo="enviada" ${v.enviada?'checked':''} onchange="mEdit(${q},'enviada',this.checked,true)" title="Marque quando a escala desta aula já tiver sido enviada aos professores."></td>
       <td>
-        <select class="statusSel" onchange="updateFieldAndRerender(${i},'statusManual',this.value)" title="Automático segue a data; escolha manualmente para marcar a aula como realizada ou não.">
-          <option value="" ${!statusEhManual(r)?'selected':''}>Automático (${st})</option>
-          <option value="Realizada" ${r.statusManual==='Realizada'?'selected':''}>Realizada</option>
-          <option value="A Realizar" ${r.statusManual==='A Realizar'?'selected':''}>A Realizar</option>
+        <select class="statusSel${mClasses(r,'statusManual',nova).map(c => ' ' + c).join('')}" data-campo="statusManual" onchange="mEdit(${q},'statusManual',this.value,true)" title="Automático segue a data; escolha manualmente para marcar a aula como realizada ou não.">
+          <option value="" ${!statusEhManual(v)?'selected':''}>Automático (${st})</option>
+          <option value="Realizada" ${v.statusManual==='Realizada'?'selected':''}>Realizada</option>
+          <option value="A Realizar" ${v.statusManual==='A Realizar'?'selected':''}>A Realizar</option>
         </select>
         <span class="badge ${badgeClass}" style="margin-left:4px">${st}</span>
       </td>
-      <td><button class="iconbtn" title="Remover" onclick="deleteRow(${i})">✕</button></td>
+      <td><button class="iconbtn" title="Remover" onclick="mRemover(${q})">✕</button></td>
     </tr>`;
   });
 
   html += `</tbody></table>`;
   document.getElementById('mensalTableWrap').innerHTML = '<p class="swipehint">Arraste a tabela para o lado para ver todas as colunas.</p><div class="tablescroll">' + html + '</div>';
+  mAtualizarBarra();
 }
 
 function capitalize(s){
@@ -977,44 +1182,338 @@ function renderRealizadas(){
   document.getElementById('realizadasTableWrap').innerHTML = '<p class="swipehint">Arraste a tabela para o lado para ver todas as colunas.</p><div class="tablescroll">' + html + '</div>';
 }
 
+/* ---------- Professores: edições em rascunho, validadas e gravadas só em "Salvar edições" ---------- */
+const pDraft = {edits:{}, removed:new Set(), added:[], aEdits:{}, aRemoved:new Set(), aAdded:[]};
+
+function pContagem(){
+  let n = pDraft.removed.size + pDraft.added.length + pDraft.aRemoved.size + pDraft.aAdded.length;
+  Object.values(pDraft.edits).forEach(e => { n += Object.keys(e).length; });
+  Object.values(pDraft.aEdits).forEach(e => { n += Object.keys(e).length; });
+  return n;
+}
+
+function pVista(p){ return Object.assign({}, p, pDraft.edits[p._id] || {}); }
+
+// "ref": índice do professor salvo (número) ou "n<k>" para professor novo em rascunho
+function pLinha(ref){
+  if(typeof ref === 'string') return {p: pDraft.added[Number(ref.slice(1))], nova: true};
+  return {p: state.professores[ref], nova: false};
+}
+
+function pAtualizarBarra(){
+  const n = pContagem();
+  const salvar = document.getElementById('btnSalvarProf');
+  const descartar = document.getElementById('btnDescartarProf');
+  const info = document.getElementById('profPendentes');
+  if(salvar){ salvar.disabled = n === 0; salvar.textContent = n ? 'Salvar edições (' + n + ')' : 'Salvar edições'; }
+  if(descartar) descartar.hidden = n === 0;
+  if(info){ info.hidden = n === 0; info.textContent = n + (n === 1 ? ' edição não salva' : ' edições não salvas'); }
+  const tab = document.querySelector('.sidebar-nav .tab[data-tab="prof"]');
+  if(tab) tab.classList.toggle('pendente', n > 0);
+}
+
+// datas "Não pode em": normaliza para comparar o texto digitado com o que está salvo
+const normIndisp = (s) => String(s || '').split(',').map(x => x.trim()).filter(Boolean).join(', ');
+
+function pEdit(ref, campo, valor, refazer, el){
+  const {p, nova} = pLinha(ref);
+  if(!p) return;
+  if(nova){
+    p[campo] = valor;
+  } else {
+    const e = pDraft.edits[p._id] = pDraft.edits[p._id] || {};
+    const salvo = campo === 'indisponivel' ? indisponivelParaBR(p.indisponivel) : (p[campo] ?? '');
+    const novo = campo === 'indisponivel' ? normIndisp(valor) : (valor ?? '');
+    if(salvo === novo) delete e[campo]; else e[campo] = valor;
+    if(!Object.keys(e).length) delete pDraft.edits[p._id];
+    if(el) el.classList.toggle('naosalvo', campo in (pDraft.edits[p._id] || {}));
+  }
+  pAtualizarBarra();
+  if(refazer) renderProf();
+}
+
+/* "Só domingo" e "Só quarta" se excluem: marcar um desmarca o outro. */
+function pSoDia(ref, campo, marcado){
+  pEdit(ref, campo, marcado, false);
+  if(marcado) pEdit(ref, campo === 'soDomingo' ? 'soQuarta' : 'soDomingo', false, false);
+  renderProf();
+}
+
+function pRemover(ref){
+  const {p, nova} = pLinha(ref);
+  if(!p) return;
+  if(nova) pDraft.added.splice(Number(ref.slice(1)), 1); else pDraft.removed.add(p._id);
+  pAtualizarBarra();
+  renderProf();
+}
+
+function pAdicionar(){
+  pDraft.added.push({_id:'n:' + Math.random().toString(36).slice(2, 10), classe:'Classe 2-5', nome:'', ativo:true,
+    soDomingo:false, soQuarta:false, maxTitular:null, maxSubstituto:null, indisponivel:'', reserva:false});
+  pAtualizarBarra();
+  renderProf();
+  const campos = document.querySelectorAll('#profTableWrap tr.linha-nova [data-campo="nome"]');
+  const ultimo = campos[campos.length - 1];
+  if(ultimo){ ultimo.scrollIntoView({behavior:'smooth', block:'center'}); ultimo.focus({preventScroll:true}); }
+}
+
+/* ----- ajudantes: guardados pelo nome original ----- */
+function aRef(ref){
+  if(typeof ref === 'string') return {nome0: null, nova: true, obj: pDraft.aAdded[Number(ref.slice(1))]};
+  return {nome0: state.ajudantes[ref], nova: false, obj: null};
+}
+
+function aEdit(ref, campo, valor, el){
+  const a = aRef(ref);
+  if(a.nova){ if(a.obj) a.obj[campo] = valor; }
+  else {
+    const e = pDraft.aEdits[a.nome0] = pDraft.aEdits[a.nome0] || {};
+    const salvo = campo === 'nome' ? a.nome0 : indisponivelParaBR(ajudantesIndispMap()[a.nome0]);
+    const novo = campo === 'nome' ? valor : normIndisp(valor);
+    if(salvo === novo) delete e[campo]; else e[campo] = valor;
+    if(!Object.keys(e).length) delete pDraft.aEdits[a.nome0];
+    if(el) el.classList.toggle('naosalvo', campo in (pDraft.aEdits[a.nome0] || {}));
+  }
+  pAtualizarBarra();
+}
+
+function aRemover(ref){
+  const a = aRef(ref);
+  if(a.nova) pDraft.aAdded.splice(Number(ref.slice(1)), 1); else pDraft.aRemoved.add(a.nome0);
+  pAtualizarBarra();
+  renderProf();
+}
+
+function aAdicionar(){
+  pDraft.aAdded.push({nome:'', indisp:''});
+  pAtualizarBarra();
+  renderProf();
+  const campos = document.querySelectorAll('#profTableWrap tr.linha-nova [data-campo="anome"]');
+  const ultimo = campos[campos.length - 1];
+  if(ultimo){ ultimo.scrollIntoView({behavior:'smooth', block:'center'}); ultimo.focus({preventScroll:true}); }
+}
+
+function pLimpar(){
+  pDraft.edits = {}; pDraft.removed = new Set(); pDraft.added = [];
+  pDraft.aEdits = {}; pDraft.aRemoved = new Set(); pDraft.aAdded = [];
+  pAtualizarBarra();
+}
+
+function pDescartar(){
+  if(!pContagem()) return;
+  if(!confirm('Descartar as ' + pContagem() + ' edição(ões) não salva(s)? O cadastro volta ao que estava salvo.')) return;
+  pLimpar();
+  renderProf();
+}
+
+function datasInvalidas(texto){
+  const ruins = [];
+  indisponivelParaISO(texto).split(',').filter(Boolean).forEach(tok => {
+    const ok = /^\d{4}-\d{2}-\d{2}$/.test(tok) && isoLocal(parseISO(tok)) === tok;
+    if(!ok) ruins.push(isoParaBR(tok));
+  });
+  return ruins;
+}
+
+function aulasDoNome(nome){
+  return state.escala.filter(r => r.titular === nome || r.substituto === nome).length;
+}
+
+// Vermelho impede salvar; amarelo pede confirmação.
+function pValidar(){
+  const erros = [], avisos = [];
+  const lerNome = (v) => String(v.nome || '').trim();
+
+  // professores
+  const finais = [];
+  state.professores.forEach(p => { if(!pDraft.removed.has(p._id)) finais.push({v:pVista(p), orig:p, tocada:!!pDraft.edits[p._id]}); });
+  pDraft.added.forEach(p => finais.push({v:p, orig:null, tocada:true}));
+  const vistos = {};
+  finais.forEach(({v, orig, tocada}) => {
+    const nome = lerNome(v);
+    const e = orig ? (pDraft.edits[orig._id] || {}) : {};
+    if(tocada && !nome) erros.push('Professor sem nome (' + v.classe + ')');
+    if(nome){
+      const k = v.classe + '|' + nome.toLowerCase();
+      if(vistos[k] && (tocada || vistos[k].tocada)) erros.push('Nome repetido na ' + v.classe + ': ' + nome);
+      vistos[k] = {tocada};
+    }
+    if(tocada){
+      const ruins = datasInvalidas(v.indisponivel);
+      if(ruins.length) erros.push((nome || 'Professor') + ': data inválida em "Não pode em" (' + ruins.join(', ') + '). Use DD/MM/AAAA.');
+    }
+    if(orig && 'nome' in e && nome && nome !== orig.nome && aulasDoNome(orig.nome))
+      avisos.push('Renomear ' + orig.nome + ' para ' + nome + ': as ' + aulasDoNome(orig.nome) + ' aula(s) já cadastradas continuam com o nome antigo.');
+    if(orig && e.ativo === false && orig.ativo !== false){
+      const n = state.escala.filter(r => (r.titular === orig.nome || r.substituto === orig.nome) && statusOf(r) === 'A Realizar' && noMesAtual(r.data)).length;
+      if(n) avisos.push(orig.nome + ' será inativado(a) e está em ' + n + ' aula(s) a realizar neste mês.');
+    }
+  });
+  state.professores.forEach(p => {
+    if(!pDraft.removed.has(p._id)) return;
+    const n = aulasDoNome(p.nome);
+    avisos.push('Remover ' + p.nome + ' (' + p.classe + ') do cadastro' + (n ? ': aparece em ' + n + ' aula(s) já cadastradas, que continuam com o nome, mas não entra mais nos sorteios.' : '.'));
+  });
+
+  // ajudantes
+  const afinais = [];
+  state.ajudantes.forEach(nome0 => {
+    if(pDraft.aRemoved.has(nome0)) return;
+    const e = pDraft.aEdits[nome0] || {};
+    afinais.push({nome0, nome: 'nome' in e ? e.nome : nome0, indisp: 'indisp' in e ? e.indisp : indisponivelParaBR(ajudantesIndispMap()[nome0]), tocada: !!pDraft.aEdits[nome0]});
+  });
+  pDraft.aAdded.forEach(a => afinais.push({nome0:null, nome:a.nome, indisp:a.indisp, tocada:true}));
+  const avistos = {};
+  afinais.forEach(a => {
+    const nome = String(a.nome || '').trim();
+    if(a.tocada && !nome) erros.push('Ajudante sem nome');
+    if(nome){
+      const k = nome.toLowerCase();
+      if(avistos[k] && (a.tocada || avistos[k].tocada)) erros.push('Ajudante repetido: ' + nome);
+      avistos[k] = {tocada: a.tocada};
+    }
+    if(a.tocada){
+      const ruins = datasInvalidas(a.indisp);
+      if(ruins.length) erros.push((nome || 'Ajudante') + ': data inválida em "Não pode em" (' + ruins.join(', ') + '). Use DD/MM/AAAA.');
+      else {
+        const naoDom = indisponivelParaISO(a.indisp).split(',').filter(Boolean).filter(d => parseISO(d).getDay() !== 0);
+        if(naoDom.length) avisos.push((nome || 'Ajudante') + ': estas datas não são domingos (' + naoDom.map(isoParaBR).join(', ') + ').');
+      }
+    }
+    const usos = a.nome0 ? Object.values(state.dominical || {}).filter(d => d && d.ajudante === a.nome0).length : 0;
+    if(a.nome0 && nome && nome !== a.nome0 && usos) avisos.push('Renomear o ajudante ' + a.nome0 + ' para ' + nome + ': ' + usos + ' domingo(s) já definidos continuam com o nome antigo.');
+  });
+  state.ajudantes.forEach(nome0 => {
+    if(!pDraft.aRemoved.has(nome0)) return;
+    const usos = Object.values(state.dominical || {}).filter(d => d && d.ajudante === nome0).length;
+    avisos.push('Remover o ajudante ' + nome0 + (usos ? ': ele aparece em ' + usos + ' domingo(s) já definidos, que continuam com o nome.' : '.'));
+  });
+  return {erros, avisos};
+}
+
+function pMostrarValidacao(erros){
+  const box = document.getElementById('profValidacao');
+  if(!box) return;
+  box.hidden = erros.length === 0;
+  box.innerHTML = erros.length
+    ? '<strong>Corrija antes de salvar:</strong><ul>' + erros.map(e => '<li>' + escHtml(e) + '</li>').join('') + '</ul>'
+    : '';
+}
+
+function pSalvar(){
+  if(!pContagem()) return;
+  const {erros, avisos} = pValidar();
+  pMostrarValidacao(erros);
+  if(erros.length) return;
+  if(avisos.length && !confirm('Confirme:\n\n• ' + avisos.join('\n• ') + '\n\nSalvar mesmo assim?')) return;
+
+  const n = pContagem();
+  // professores: edições, remoções e novos
+  state.professores.forEach(p => {
+    const e = pDraft.edits[p._id];
+    if(!e) return;
+    const c = Object.assign({}, e);
+    if('nome' in c) c.nome = String(c.nome).trim();
+    if('indisponivel' in c) c.indisponivel = indisponivelParaISO(c.indisponivel);
+    Object.assign(p, c);
+  });
+  state.professores = state.professores.filter(p => !pDraft.removed.has(p._id));
+  pDraft.added.forEach(p => {
+    const novo = Object.assign({}, p);
+    novo.nome = String(novo.nome).trim();
+    novo.indisponivel = indisponivelParaISO(novo.indisponivel);
+    state.professores.push(novo);
+  });
+
+  // ajudantes: o mapa de datas acompanha o nome
+  const mapa = ajudantesIndispMap();
+  const lista = [];
+  state.ajudantes.forEach(nome0 => {
+    if(pDraft.aRemoved.has(nome0)){ delete mapa[nome0]; return; }
+    const e = pDraft.aEdits[nome0] || {};
+    const nome = 'nome' in e ? String(e.nome).trim() : nome0;
+    const iso = 'indisp' in e ? indisponivelParaISO(e.indisp) : (mapa[nome0] || '');
+    if(nome !== nome0) delete mapa[nome0];
+    if(iso) mapa[nome] = iso; else delete mapa[nome];
+    lista.push(nome);
+  });
+  pDraft.aAdded.forEach(a => {
+    const nome = String(a.nome).trim();
+    const iso = indisponivelParaISO(a.indisp);
+    if(iso) mapa[nome] = iso;
+    lista.push(nome);
+  });
+  state.ajudantes = lista;
+
+  pLimpar();
+  pMostrarValidacao([]);
+  renderAll();
+  marcarSalvo(n + (n === 1 ? ' edição salva' : ' edições salvas'));
+}
+
+function pClasses(campo, nova, e){
+  return (nova || (e && campo in e)) ? ' naosalvo' : '';
+}
+
 function renderProf(){
-  let html = `<p class="note">As restrições abaixo são respeitadas pelo sorteio do rodízio. <strong>Só domingo</strong>: nunca cai em quarta, nem como titular nem como substituto. <strong>Só quarta</strong>: o inverso, nunca cai em domingo (os dois não podem ficar marcados juntos). <strong>Reserva</strong>: pode ser escalada como substituta na <em>outra</em> classe, mas só quando não houver substituta suficiente nela (respeitando o \"Não pode em\" dela e sem coincidir com a aula dela na própria classe). <strong>Máx. titular</strong> e <strong>máx. subst.</strong>: teto de aulas no mês em cada papel (vazio = sem limite). <strong>Não pode em</strong>: datas soltas separadas por vírgula, no formato DD/MM/AAAA.</p>
+  MesclaEstado.garantirIds(state);
+  const linhasProf = state.professores
+    .map((p,i) => ({p, i, ref:i, v:pVista(p), nova:false}))
+    .filter(x => !pDraft.removed.has(x.p._id))
+    .concat(pDraft.added.map((p,k) => ({p, i:-1, ref:'n' + k, v:p, nova:true})));
+
+  let html = `<p class="note">As restrições abaixo são respeitadas pelo sorteio do rodízio. <strong>Só domingo</strong>: nunca cai em quarta, nem como titular nem como substituto. <strong>Só quarta</strong>: o inverso, nunca cai em domingo (os dois não podem ficar marcados juntos). <strong>Reserva</strong>: pode ser escalada como substituta na outra classe, só quando faltar substituta lá. <strong>Máx. titular</strong> e <strong>máx. subst.</strong>: teto de aulas no mês (vazio = sem limite). <strong>Não pode em</strong>: datas separadas por vírgula (DD/MM/AAAA). <em>Nada é gravado até você clicar em "Salvar edições".</em></p>
   <table class="prof"><thead><tr><th>Classe</th><th>Nome</th><th>Ativo</th><th>Só domingo</th><th>Só quarta</th><th>Reserva</th><th>Máx. titular</th><th>Máx. subst.</th><th>Não pode em</th><th></th></tr></thead><tbody>`;
-  state.professores.forEach((p,i) => {
-    html += `<tr data-prof="${i}">
-      <td><select onchange="updateProfField(${i},'classe',this.value)">
-        <option value="Classe 2-5" ${p.classe==='Classe 2-5'?'selected':''}>Classe 2-5</option>
-        <option value="Classe 6-11" ${p.classe==='Classe 6-11'?'selected':''}>Classe 6-11</option>
+  linhasProf.forEach(({p, i, ref, v, nova}) => {
+    const q = typeof ref === 'string' ? `'${ref}'` : ref;
+    const e = nova ? null : pDraft.edits[p._id];
+    const sujo = (campo) => pClasses(campo, nova, e);
+    const alerta = !nova && profInativoEmUso(p) ? ' campoalerta aviso' : '';
+    html += `<tr ${nova ? 'class="linha-nova" ' : ''}data-prof="${nova ? 'novo' : i}">
+      <td><select class="${sujo('classe').trim()}" onchange="pEdit(${q},'classe',this.value,false,this)">
+        <option value="Classe 2-5" ${v.classe==='Classe 2-5'?'selected':''}>Classe 2-5</option>
+        <option value="Classe 6-11" ${v.classe==='Classe 6-11'?'selected':''}>Classe 6-11</option>
       </select></td>
-      <td><input type="text" value="${escAttr(p.nome)}" oninput="updateProfFieldSilent(${i},'nome',this.value)" onblur="renderAll()"></td>
-      <td style="text-align:center"><input type="checkbox" data-campo="ativo"${profInativoEmUso(p) ? ' class="campoalerta aviso"' : ''} ${p.ativo?'checked':''} onchange="updateProfField(${i},'ativo',this.checked)"></td>
-      <td style="text-align:center"><input type="checkbox" ${p.soDomingo?'checked':''} onchange="setSoDia(${i},'soDomingo',this.checked)"></td>
-      <td style="text-align:center"><input type="checkbox" ${p.soQuarta?'checked':''} onchange="setSoDia(${i},'soQuarta',this.checked)"></td>
-      <td style="text-align:center"><input type="checkbox" ${p.reserva?'checked':''} onchange="updateProfField(${i},'reserva',this.checked)" title="Pode ser escalada como substituta na outra classe, só quando faltar substituta lá."></td>
-      <td><input type="number" min="0" style="width:70px" value="${p.maxTitular ?? ''}" onchange="updateProfField(${i},'maxTitular', this.value===''?null:Number(this.value))"></td>
-      <td><input type="number" min="0" style="width:70px" value="${p.maxSubstituto ?? ''}" onchange="updateProfField(${i},'maxSubstituto', this.value===''?null:Number(this.value))"></td>
-      <td><input type="text" placeholder="13/09/2026, 27/09/2026" value="${escAttr(indisponivelParaBR(p.indisponivel))}" oninput="updateProfFieldSilent(${i},'indisponivel',this.value)" onblur="finalizarIndisponivel(${i}, this)"></td>
-      <td><button class="iconbtn" title="Remover" onclick="deleteProf(${i})">✕</button></td>
+      <td><input type="text" data-campo="nome" class="in-nome${sujo('nome')}" placeholder="Nome" value="${escAttr(v.nome)}" oninput="pEdit(${q},'nome',this.value,false,this)"></td>
+      <td><input type="checkbox" data-campo="ativo" class="${(alerta + sujo('ativo')).trim()}" ${v.ativo?'checked':''} onchange="pEdit(${q},'ativo',this.checked,false,this)"></td>
+      <td><input type="checkbox" class="${sujo('soDomingo').trim()}" ${v.soDomingo?'checked':''} onchange="pSoDia(${q},'soDomingo',this.checked)"></td>
+      <td><input type="checkbox" class="${sujo('soQuarta').trim()}" ${v.soQuarta?'checked':''} onchange="pSoDia(${q},'soQuarta',this.checked)"></td>
+      <td><input type="checkbox" class="${sujo('reserva').trim()}" ${v.reserva?'checked':''} onchange="pEdit(${q},'reserva',this.checked,false,this)" title="Pode ser escalada como substituta na outra classe, só quando faltar substituta lá."></td>
+      <td><input type="number" min="0" class="in-num${sujo('maxTitular')}" value="${v.maxTitular ?? ''}" onchange="pEdit(${q},'maxTitular', this.value===''?null:Number(this.value),false,this)"></td>
+      <td><input type="number" min="0" class="in-num${sujo('maxSubstituto')}" value="${v.maxSubstituto ?? ''}" onchange="pEdit(${q},'maxSubstituto', this.value===''?null:Number(this.value),false,this)"></td>
+      <td><input type="text" class="in-indisp${sujo('indisponivel')}" placeholder="13/09/2026, 27/09/2026" value="${escAttr(nova || (e && 'indisponivel' in e) ? v.indisponivel : indisponivelParaBR(v.indisponivel))}" oninput="pEdit(${q},'indisponivel',this.value,false,this)"></td>
+      <td><button class="iconbtn" title="Remover" onclick="pRemover(${q})">✕</button></td>
     </tr>`;
   });
   html += `</tbody></table>`;
 
-  html += `<h3 style="margin:22px 0 6px;font-size:15px;color:var(--blue-d)">Ajudantes</h3>
-    <p class="note">Auxiliam nas duas classes, apenas aos domingos. Um por domingo, em rodízio. Em <strong>Não pode em</strong>, informe as datas em que o ajudante não pode servir (DD/MM/AAAA, separadas por vírgula): o sorteio não o escala nessas datas. Deixe vazio se ele pode em qualquer domingo.</p>
-    <table class="prof"><thead><tr><th style="width:34%">Nome</th><th>Não pode em</th><th></th></tr></thead><tbody>`;
   if(!Array.isArray(state.ajudantes)) state.ajudantes = ajudantesIniciais.slice();
-  state.ajudantes.forEach((a,i) => {
-    const aviso = avisoIndispAjudante(a);
-    html += `<tr>
-      <td><input type="text" value="${escAttr(a)}" oninput="updateAjudante(${i},this.value)" onblur="renderAll()"></td>
-      <td><input type="text" placeholder="13/09/2026, 27/09/2026" value="${escAttr(indisponivelParaBR(ajudantesIndispMap()[a]))}" oninput="updateIndispAjudanteSilent(${i},this.value)" onblur="finalizarIndispAjudante(${i}, this)">
+  const mapa = ajudantesIndispMap();
+  const linhasAj = state.ajudantes
+    .map((nome0, i) => ({nome0, ref:i, nova:false}))
+    .filter(x => !pDraft.aRemoved.has(x.nome0))
+    .concat(pDraft.aAdded.map((a, k) => ({nome0:null, ref:'n' + k, nova:true, obj:a})));
+
+  html += `<h3 style="margin:22px 0 6px;font-size:15px;color:var(--blue-d)">Ajudantes</h3>
+    <p class="note">Auxiliam nas duas classes, apenas aos domingos. Um por domingo, em rodízio. Em <strong>Não pode em</strong>, informe as datas em que o ajudante não pode servir (DD/MM/AAAA, separadas por vírgula): o sorteio não o escala nessas datas.</p>
+    <table class="prof"><thead><tr><th>Nome</th><th>Não pode em</th><th></th></tr></thead><tbody>`;
+  linhasAj.forEach(({nome0, ref, nova, obj}) => {
+    const q = typeof ref === 'string' ? `'${ref}'` : ref;
+    const e = nova ? null : (pDraft.aEdits[nome0] || {});
+    const nome = nova ? obj.nome : ('nome' in e ? e.nome : nome0);
+    const indisp = nova ? obj.indisp : ('indisp' in e ? e.indisp : indisponivelParaBR(mapa[nome0]));
+    const aviso = !nova && !('indisp' in e) ? avisoIndispAjudante(nome0) : '';
+    html += `<tr ${nova ? 'class="linha-nova" ' : ''}>
+      <td><input type="text" data-campo="anome" class="in-nome${pClasses('nome', nova, e)}" placeholder="Nome" value="${escAttr(nome)}" oninput="aEdit(${q},'nome',this.value,this)"></td>
+      <td><input type="text" class="in-indisp${pClasses('indisp', nova, e)}" placeholder="13/09/2026, 27/09/2026" value="${escAttr(indisp)}" oninput="aEdit(${q},'indisp',this.value,this)">
         ${aviso ? `<div class="note" style="color:var(--orange-d);margin:4px 0 0">⚠ ${escHtml(aviso)}</div>` : ''}</td>
-      <td><button class="iconbtn" title="Remover" onclick="deleteAjudante(${i})">✕</button></td>
+      <td><button class="iconbtn" title="Remover" onclick="aRemover(${q})">✕</button></td>
     </tr>`;
   });
-  html += `</tbody></table><button style="margin-top:8px" onclick="addAjudante()">+ Adicionar ajudante</button>`;
+  html += `</tbody></table><div style="text-align:center"><button style="margin-top:10px" onclick="aAdicionar()">+ Adicionar ajudante</button></div>`;
 
   document.getElementById('profTableWrap').innerHTML = '<p class="swipehint">Arraste a tabela para o lado para ver todas as colunas.</p><div class="tablescroll">' + html + '</div>';
+  pAtualizarBarra();
 }
 
 function updateProfField(i, field, value){
