@@ -277,7 +277,7 @@
   .modal-card .sub{margin:0 0 14px;font-size:13px;color:var(--muted);}
   .modal-card label{display:block;margin:12px 0 4px;font-size:13px;font-weight:600;}
   .modal-card select,.modal-card input[type=date]{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:13px;background:#fff;}
-  #relCustom{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+  #relCustom{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   #relCustom label{margin:0;font-weight:500;font-size:12px;color:var(--muted);}
   .relresumo{margin:16px 0 4px;padding:10px 12px;border-radius:10px;background:var(--green-l);color:var(--green-d);font-size:13px;font-weight:600;}
   .relresumo.erro{background:var(--yellow-l);color:var(--yellow-d);}
@@ -684,17 +684,10 @@
       <option value="Classe 2-5">Somente Classe 2-5</option>
       <option value="Classe 6-11">Somente Classe 6-11</option>
     </select>
-    <label for="relPeriodo">Período</label>
-    <select id="relPeriodo" onchange="relatorioAtualizar()">
-      <option value="mes">Este mês</option>
-      <option value="prox">Próximo mês</option>
-      <option value="ant">Mês anterior</option>
-      <option value="tri">Últimos 3 meses</option>
-      <option value="custom">Personalizado</option>
-    </select>
-    <div id="relCustom" hidden>
-      <label>De <input type="date" id="relDe" onchange="relatorioAtualizar()"></label>
-      <label>Até <input type="date" id="relAte" onchange="relatorioAtualizar()"></label>
+    <label>Período</label>
+    <div id="relCustom">
+      <label>Data inicial <input type="date" id="relDe" onchange="relatorioAtualizar()"></label>
+      <label>Data final <input type="date" id="relAte" onchange="relatorioAtualizar()"></label>
     </div>
     <div id="relResumo" class="relresumo"></div>
     <div id="relRascunho" class="relrasc" hidden></div>
@@ -3488,21 +3481,13 @@ const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho',
 const NOME_CLASSE_PDF = {'Classe 2-5':'CLASSE 2 a 5', 'Classe 6-11':'CLASSE 6 a 11'};
 
 /* ---------- Relatório da escala (antigo "Baixar PDF do período") ---------- */
-function relatorioIntervalo(tipo){
-  const h = todayMidnight();
-  const y = h.getFullYear(), m = h.getMonth();
-  const fim = (ano, mes) => isoLocal(new Date(ano, mes + 1, 0));
-  if(tipo === 'mes') return {de: isoLocal(new Date(y, m, 1)), ate: fim(y, m)};
-  if(tipo === 'prox') return {de: isoLocal(new Date(y, m + 1, 1)), ate: fim(y, m + 1)};
-  if(tipo === 'ant') return {de: isoLocal(new Date(y, m - 1, 1)), ate: fim(y, m - 1)};
-  if(tipo === 'tri') return {de: isoLocal(new Date(y, m - 2, 1)), ate: fim(y, m)};
+function relatorioIntervalo(){
   return {de: document.getElementById('relDe').value, ate: document.getElementById('relAte').value};
 }
 
 function relatorioAulas(){
-  const tipo = document.getElementById('relPeriodo').value;
   const classe = document.getElementById('relClasse').value;
-  const iv = relatorioIntervalo(tipo);
+  const iv = relatorioIntervalo();
   const valido = !!iv.de && !!iv.ate && iv.de <= iv.ate;
   const rows = valido
     ? state.escala.filter(r => r.data && r.data >= iv.de && r.data <= iv.ate && (!classe || r.classe === classe))
@@ -3511,19 +3496,14 @@ function relatorioAulas(){
 }
 
 function relatorioAtualizar(){
-  const tipo = document.getElementById('relPeriodo').value;
-  const custom = document.getElementById('relCustom');
-  if(custom) custom.hidden = tipo !== 'custom';
-  if(tipo === 'custom' && !document.getElementById('relDe').value){
-    const iv = relatorioIntervalo('mes');
-    document.getElementById('relDe').value = iv.de;
-    document.getElementById('relAte').value = iv.ate;
-  }
   const {iv, valido, rows} = relatorioAulas();
   const resumo = document.getElementById('relResumo');
   const btn = document.getElementById('relGerar');
-  if(!valido){
-    resumo.textContent = 'Escolha a data inicial e a data final (a inicial não pode ser depois da final).';
+  if(!iv.de || !iv.ate){
+    resumo.textContent = 'Escolha a data inicial e a data final do período.';
+    resumo.className = 'relresumo erro';
+  } else if(!valido){
+    resumo.textContent = 'A data inicial não pode ser depois da data final.';
     resumo.className = 'relresumo erro';
   } else if(!rows.length){
     resumo.textContent = 'Nenhuma aula entre ' + fmtDate(iv.de) + ' e ' + fmtDate(iv.ate) + ' com esse filtro. Gere o rodízio desse período antes.';
@@ -3542,13 +3522,14 @@ function relatorioAtualizar(){
 }
 
 function relatorioAbrir(){
+  // começa no mês atual, para você só ajustar as datas
+  const h = todayMidnight();
   document.getElementById('relClasse').value = '';
-  document.getElementById('relPeriodo').value = 'mes';
-  document.getElementById('relDe').value = '';
-  document.getElementById('relAte').value = '';
+  document.getElementById('relDe').value = isoLocal(new Date(h.getFullYear(), h.getMonth(), 1));
+  document.getElementById('relAte').value = isoLocal(new Date(h.getFullYear(), h.getMonth() + 1, 0));
   document.getElementById('relatorioModal').hidden = false;
   relatorioAtualizar();
-  document.getElementById('relGerar').focus();
+  document.getElementById('relDe').focus();
 }
 
 function relatorioFechar(){
