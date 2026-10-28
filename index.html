@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="merge.js"></script>
 <style>
   :root{
     /* ---- Identidade Koinonia / Koinonia Kids ---- */
@@ -1831,7 +1832,7 @@ function syncConectar(){
   if(metodo === 'nuvem'){
     try{ localStorage.removeItem('ibk_nuvem_off'); }catch(err){}
     syncCfg = {metodo:'nuvem'};
-    syncCarimbo = null;
+    syncCarimbo = null; nuvemRev = 0; syncBase = null;
     syncMsg('Conectando ao banco do site…');
     syncIniciarLoop();
     syncPuxar(true);
@@ -1871,6 +1872,7 @@ function syncConectar(){
 function syncDesconectar(){
   if(!confirm('Desconectar este aparelho? Os dados continuam salvos aqui, mas param de sincronizar com os outros.')) return;
   syncCfg = null; syncCarimbo = null; driveToken = null; driveTokenAte = 0;
+  nuvemRev = 0; syncBase = null;
   try{ localStorage.removeItem(SYNC_CFG); localStorage.setItem('ibk_nuvem_off', '1'); }catch(err){}
   if(syncTimer){ clearInterval(syncTimer); syncTimer = null; }
   syncMsg('Não conectado — os dados estão só neste aparelho.');
@@ -1989,10 +1991,52 @@ function syncQuando(iso){
    Usa a sessão de login do site (cookie): não precisa de chave nem de configuração.
    O servidor é a fonte única; todos os aparelhos logados leem e gravam o mesmo estado. */
 
+let nuvemRev = 0;       // versão do banco em que este aparelho se baseou
+let syncBase = null;     // cópia do último estado sincronizado (base da mesclagem)
+
 function nuvemStatus(resp){
   if(resp.status === 401){ location.href = '/login.html'; throw new Error('login-site'); }
   if(!resp.ok) throw new Error('http');
   return resp;
+}
+
+// Deixa o estado vindo do banco no mesmo formato do local (campos padrão + ids das linhas).
+function nuvemNormalizar(d){
+  d.professores = (d.professores || []).map(completarProf);
+  d.escala = (d.escala || []).map(r => Object.assign({statusManual:'', enviada:false}, r));
+  if(!Array.isArray(d.ajudantes)) d.ajudantes = ajudantesIniciais.slice();
+  if(!d.dominical || typeof d.dominical !== 'object') d.dominical = {};
+  return MesclaEstado.garantirIds(d);
+}
+
+function nuvemAplicar(dados, rev, carimbo, texto){
+  state = dados;
+  syncBase = MesclaEstado.clone(dados);   // base = o que o banco tem agora
+  nuvemRev = rev;
+  syncCarimbo = carimbo;
+  syncAplicando = true;
+  renderAll();
+  syncAplicando = false;
+  salvarLocal();
+  syncMsg(texto, 'ok');
+}
+
+// Edição simultânea: junta o que mudou aqui com o que mudou no banco (veja merge.js).
+// Sem base conhecida (primeira conexão), vale o banco.
+function nuvemMesclar(r){
+  const remoto = nuvemNormalizar(MesclaEstado.clone(r.dados));
+  if(!syncBase){ nuvemAplicar(remoto, r.rev, r.atualizado_em, 'Atualizado com a versão do banco.'); return; }
+  const local = MesclaEstado.garantirIds(MesclaEstado.clone(state));
+  const juntos = nuvemNormalizar(MesclaEstado.mesclar(syncBase, local, remoto));
+  state = juntos;
+  syncBase = MesclaEstado.clone(remoto);
+  nuvemRev = r.rev;
+  syncCarimbo = r.atualizado_em;
+  syncAplicando = true;
+  renderAll();
+  syncAplicando = false;
+  salvarLocal();
+  syncMsg('Alterações de outra pessoa foram combinadas com as suas.', 'ok');
 }
 
 function nuvemPuxar(inicial){
@@ -2006,30 +2050,44 @@ function nuvemPuxar(inicial){
         if(inicial){ syncMsg('Banco vazio — enviando os dados deste aparelho.', 'ok'); return syncEnviar(); }
         return;
       }
-      if(remoto.atualizado_em === syncCarimbo){
+      if(remoto.rev === nuvemRev){
         syncMsg('Tudo sincronizado · última alteração ' + syncQuando(syncCarimbo) + '.', 'ok');
         return;
       }
-      if(syncPendente && !inicial) return syncEnviar();
-      syncAplicarRemoto(remoto.dados, remoto.atualizado_em, 'do banco');
+      if(syncPendente && !inicial){ nuvemMesclar(remoto); return syncEnviar(); }
+      nuvemAplicar(nuvemNormalizar(remoto.dados), remoto.rev, remoto.atualizado_em,
+        'Atualizado com a versão do banco (' + syncQuando(remoto.atualizado_em) + ').');
     })
     .catch(err => { syncOcupado = false; if(err.message !== 'login-site') syncErro(err); });
 }
 
-function nuvemEnviar(){
+function nuvemEnviar(tentativa){
+  tentativa = tentativa || 0;
   syncOcupado = true;
+  MesclaEstado.garantirIds(state);
+  const enviado = JSON.stringify(state);
   return fetch('/api/state', {
     method: 'PUT',
     credentials: 'same-origin',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({dados: state})
+    body: JSON.stringify({dados: state, rev: nuvemRev})
   })
-    .then(nuvemStatus)
-    .then(resp => resp.json())
-    .then(r => {
-      syncCarimbo = r.atualizado_em;
-      syncPendente = false;
+    .then(resp => resp.status === 409 ? resp.json().then(r => ({conflito: true, r})) : nuvemStatus(resp).json().then(r => ({r})))
+    .then(({conflito, r}) => {
       syncOcupado = false;
+      if(conflito){
+        // alguém gravou antes: combina e tenta de novo
+        nuvemMesclar(r);
+        if(tentativa < 4) return nuvemEnviar(tentativa + 1);
+        syncPendente = true;
+        syncMsg('Muitas alterações ao mesmo tempo. Vou tentar de novo em instantes.', 'erro');
+        return;
+      }
+      nuvemRev = r.rev;
+      syncCarimbo = r.atualizado_em;
+      syncBase = JSON.parse(enviado);
+      if(JSON.stringify(state) !== enviado){ syncAgendarEnvio(); return; } // mudou durante o envio
+      syncPendente = false;
       syncMsg('Enviado — os outros aparelhos recebem em poucos segundos.', 'ok');
     })
     .catch(err => { syncOcupado = false; if(err.message !== 'login-site') syncErro(err); });

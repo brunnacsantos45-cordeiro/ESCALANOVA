@@ -1,11 +1,12 @@
 /* Service worker do IBK Escalas.
    Guarda os arquivos do app para funcionar sem internet.
    Ao publicar uma versão nova, troque o número do CACHE. */
-const CACHE = 'ibk-escalas-v16';
+const CACHE = 'ibk-escalas-v17';
 
 const ARQUIVOS = [
   './',
   './index.html',
+  './merge.js',
   './manifest.webmanifest',
   './icone-192.png',
   './icone-512.png',
