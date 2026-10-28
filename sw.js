@@ -1,7 +1,7 @@
 /* Service worker do IBK Escalas.
    Guarda os arquivos do app para funcionar sem internet.
    Ao publicar uma versão nova, troque o número do CACHE. */
-const CACHE = 'ibk-escalas-v25';
+const CACHE = 'ibk-escalas-v26';
 
 const ARQUIVOS = [
   './',
@@ -11,7 +11,7 @@ const ARQUIVOS = [
   './icone-192.png',
   './icone-512.png',
   './icone-maskable-512.png',
-  'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js'
+  './vendor/chart.umd.min.js'
 ];
 
 self.addEventListener('install', evt => {

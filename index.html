@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="vendor/chart.umd.min.js"></script>
 <script src="merge.js"></script>
 <style>
   :root{
@@ -205,6 +205,19 @@
   .tbcard .note{margin:0 0 12px;}
   @media (max-width:1000px){ .tabkpis{grid-template-columns:repeat(2,minmax(0,1fr));} }
   @media (max-width:480px){ .tabhead h2{font-size:17px;} .tabhead .th-ico{width:40px;height:40px;} .tbcard{padding:12px;} }
+
+  /* ---------- Visão Geral: período e gráficos ---------- */
+  .periodobar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;}
+  #visaoChips{display:flex;gap:6px;flex-wrap:wrap;}
+  #visaoChips button{font-size:12px;padding:6px 12px;border-radius:20px;}
+  #visaoChips button.on{background:var(--orange-d);border-color:var(--orange-d);color:#fff;font-weight:600;}
+  #visaoCustom{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);}
+  #visaoCustom input{font-size:12px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:#fff;}
+  .periodobar .rot{margin-left:auto;font-size:12px;color:var(--muted);}
+  .visgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+  .visgrid .chartbox{margin-top:0;min-width:0;}
+  .visgrid .chartwrap{height:300px;}
+  @media (max-width:1000px){ .visgrid{grid-template-columns:minmax(0,1fr);} .periodobar .rot{margin-left:0;width:100%;} }
 
   /* ---------- Início: agenda dos próximos 21 dias ---------- */
   [hidden]{display:none !important;}
@@ -524,15 +537,23 @@
   </div>
 
   <div class="panel" id="panel-visao">
-    <div class="grid2">
-      <div class="chartbox">
-        <h3>Aulas dadas por professor (titular) — checagem de rodízio</h3>
-        <div class="chartwrap" id="wrapProf"><canvas id="chartProf"></canvas></div>
+    <div class="d-card periodobar">
+      <div id="visaoChips">
+        <button data-p="mes" onclick="setVisaoPeriodo('mes')">Este mês</button>
+        <button data-p="mesant" onclick="setVisaoPeriodo('mesant')">Mês anterior</button>
+        <button data-p="tri" onclick="setVisaoPeriodo('tri')">Últimos 3 meses</button>
+        <button data-p="ano" onclick="setVisaoPeriodo('ano')">Este ano</button>
+        <button data-p="tudo" onclick="setVisaoPeriodo('tudo')">Tudo</button>
+        <button data-p="custom" onclick="setVisaoPeriodo('custom')">Personalizado</button>
       </div>
-      <div class="chartbox">
-        <h3>Aulas por classe</h3>
-        <div class="chartwrap" id="wrapClasse"><canvas id="chartClasse"></canvas></div>
-      </div>
+      <div id="visaoCustom" hidden>De <input type="date" id="visaoDe" onchange="setVisaoDatas()"> até <input type="date" id="visaoAte" onchange="setVisaoDatas()"></div>
+      <div class="rot" id="visaoRotulo"></div>
+    </div>
+    <div class="visgrid">
+      <div class="chartbox"><h3>Aulas por professor · titular e substituto</h3><div class="chartwrap" id="wrapProf"></div></div>
+      <div class="chartbox"><h3>Aulas ao longo do tempo</h3><div class="chartwrap" id="wrapEvol"></div></div>
+      <div class="chartbox"><h3>Aulas por classe</h3><div class="chartwrap" id="wrapClasse"></div></div>
+      <div class="chartbox"><h3>Situação das aulas</h3><div class="chartwrap" id="wrapSit"></div></div>
     </div>
   </div>
 
@@ -628,7 +649,6 @@ let state = {
   dominical: {}                      // por data: quem dá a EBD e quem ajuda
 };
 
-let chartProf = null, chartClasse = null;
 
 function todayMidnight(){
   const d = new Date();
@@ -695,7 +715,7 @@ function tabInit(){
       document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
       t.classList.add('active');
       document.getElementById('panel-' + t.dataset.tab).classList.add('active');
-      if(t.dataset.tab === 'visao') renderCharts();
+      if(t.dataset.tab === 'visao') renderVisao();
       if(t.dataset.tab === 'dashboard') renderSemana();
       toggleSidebar(true); // recolhe para a barra estreita ao selecionar qualquer item
     });
@@ -1340,12 +1360,6 @@ function renderKpisAbas(){
     kpiAba('y','users', profs.filter(p => !p.ativo).length, 'Inativos', 'fora do rodízio') +
     kpiAba('b','users', profs.filter(p => p.reserva).length, 'Reservas', 'apoio quando falta alguém') +
     kpiAba('o','cal', profs.filter(p => p.soDomingo).length, 'Só domingo', 'disponibilidade restrita'));
-
-  put('visao',
-    kpiAba('o','cal', todas.length, 'Total de aulas', 'no histórico') +
-    kpiAba('g','check', realizadas.length, 'Realizadas', 'até hoje') +
-    kpiAba('b','clock', aRealizar.length, 'A realizar', 'à frente') +
-    kpiAba('o','users', new Set(todas.map(r => r.titular).filter(Boolean)).size, 'Professores com aula', 'como titular'));
 }
 
 function chartMensagem(idWrap, texto){
@@ -1360,52 +1374,184 @@ function chartCanvas(idWrap, idCanvas){
   return document.getElementById(idCanvas);
 }
 
+/* ---------- Visão Geral: período + gráficos ---------- */
+let chartProf = null, chartClasse = null, chartEvol = null, chartSit = null;
+
+let visaoPeriodo = (function(){
+  try{
+    const v = JSON.parse(localStorage.getItem('ibk_visao_periodo') || 'null');
+    if(v && ['mes','mesant','tri','ano','tudo','custom'].includes(v.p)) return v;
+  }catch(err){}
+  return {p:'mes', de:'', ate:''};
+})();
+
+function visaoSalvarPeriodo(){
+  try{ localStorage.setItem('ibk_visao_periodo', JSON.stringify(visaoPeriodo)); }catch(err){}
+}
+
+function setVisaoPeriodo(p){
+  visaoPeriodo.p = p;
+  if(p === 'custom' && (!visaoPeriodo.de || !visaoPeriodo.ate)){
+    const iv = visaoIntervalo('mes');
+    visaoPeriodo.de = iv.de; visaoPeriodo.ate = iv.ate;
+  }
+  visaoSalvarPeriodo();
+  renderVisao();
+}
+
+function setVisaoDatas(){
+  const de = document.getElementById('visaoDe').value;
+  const ate = document.getElementById('visaoAte').value;
+  if(de && ate && de <= ate){
+    visaoPeriodo = {p:'custom', de, ate};
+    visaoSalvarPeriodo();
+    renderVisao();
+  }
+}
+
+// Intervalo [de, ate] em AAAA-MM-DD para cada opção do seletor.
+function visaoIntervalo(p){
+  const h = todayMidnight();
+  const y = h.getFullYear(), m = h.getMonth();
+  const fim = (ano, mes) => isoLocal(new Date(ano, mes + 1, 0));
+  if(p === 'mes') return {de: isoLocal(new Date(y, m, 1)), ate: fim(y, m)};
+  if(p === 'mesant') return {de: isoLocal(new Date(y, m - 1, 1)), ate: fim(y, m - 1)};
+  if(p === 'tri') return {de: isoLocal(new Date(y, m - 2, 1)), ate: fim(y, m)};
+  if(p === 'ano') return {de: y + '-01-01', ate: y + '-12-31'};
+  if(p === 'custom') return {de: visaoPeriodo.de, ate: visaoPeriodo.ate};
+  const datas = state.escala.map(r => r.data).filter(Boolean).sort();
+  return {de: datas[0] || isoLocal(h), ate: datas[datas.length - 1] || isoLocal(h)};
+}
+
+function visaoAulas(){
+  const iv = visaoIntervalo(visaoPeriodo.p);
+  return {iv, rows: state.escala.filter(r => r.data && r.data >= iv.de && r.data <= iv.ate)};
+}
+
+const COR = {laranja:'#FF7A00', azul:'#155E9E', verde:'#1E7A38', amarelo:'#E6A100', cinza:'#C9C6BA', laranjaClaro:'#FFC58A', azulClaro:'#8DB6E0'};
+
+function visaoNomeMes(iso){
+  return capitalize(parseISO(iso).toLocaleDateString('pt-BR', {month:'short', year:'2-digit'}).replace('.', '').replace(' de ', '/'));
+}
+
+function renderVisao(){
+  // seletor
+  document.querySelectorAll('#visaoChips button').forEach(b => b.classList.toggle('on', b.dataset.p === visaoPeriodo.p));
+  const custom = document.getElementById('visaoCustom');
+  const {iv, rows} = visaoAulas();
+  if(custom){
+    custom.hidden = visaoPeriodo.p !== 'custom';
+    document.getElementById('visaoDe').value = iv.de || '';
+    document.getElementById('visaoAte').value = iv.ate || '';
+  }
+  const rot = document.getElementById('visaoRotulo');
+  if(rot) rot.textContent = fmtDate(iv.de) + ' a ' + fmtDate(iv.ate) + ' · ' + rows.length + ' aula(s)';
+
+  // indicadores do período
+  const real = rows.filter(r => statusOf(r) === 'Realizada').length;
+  const pend = rows.filter(r => statusOf(r) === 'A Realizar').length;
+  const titulares = new Set(rows.map(r => r.titular).filter(Boolean)).size;
+  const semTit = rows.filter(r => !r.titular).length;
+  const kp = document.getElementById('kpi-visao');
+  if(kp) kp.innerHTML =
+    kpiAba('o','cal', rows.length, 'Aulas no período', 'todas as classes') +
+    kpiAba('g','check', real, 'Realizadas', rows.length ? Math.round(real / rows.length * 100) + '% do período' : '—') +
+    kpiAba('b','clock', pend, 'A realizar', 'ainda por acontecer') +
+    kpiAba(semTit ? 'y' : 'o','users', titulares, 'Professores titulares', semTit ? semTit + ' aula(s) sem titular' : 'no período');
+
+  renderCharts();
+}
+
 function renderCharts(){
-  // A biblioteca de gráficos vem da internet na primeira abertura.
+  const ids = ['wrapProf','wrapEvol','wrapClasse','wrapSit'];
   if(typeof Chart === 'undefined'){
-    const aviso = 'Os gráficos não carregaram. Eles precisam de internet na primeira vez que o app abre — conecte-se e recarregue a página.';
-    chartMensagem('wrapProf', aviso);
-    chartMensagem('wrapClasse', aviso);
-    chartProf = null; chartClasse = null;
+    ids.forEach(id => chartMensagem(id, 'Não foi possível carregar os gráficos. Recarregue a página.'));
+    chartProf = chartEvol = chartClasse = chartSit = null;
+    return;
+  }
+  Chart.defaults.font.family = "'Poppins','Segoe UI',Arial,sans-serif";
+  Chart.defaults.color = '#75736B';
+
+  const {iv, rows} = visaoAulas();
+  const vazio = 'Nenhuma aula neste período. Escolha outro período acima ou gere a escala na aba Escala Mensal.';
+  const limpar = (nome) => { if(nome === 'prof' && chartProf){ chartProf.destroy(); chartProf = null; }
+    if(nome === 'evol' && chartEvol){ chartEvol.destroy(); chartEvol = null; }
+    if(nome === 'classe' && chartClasse){ chartClasse.destroy(); chartClasse = null; }
+    if(nome === 'sit' && chartSit){ chartSit.destroy(); chartSit = null; } };
+
+  if(!rows.length){
+    ['prof','evol','classe','sit'].forEach(limpar);
+    ids.forEach(id => chartMensagem(id, vazio));
     return;
   }
 
-  const counts = {};
-  state.escala.filter(r => statusOf(r)==='Realizada' && r.titular).forEach(r => {
-    counts[r.titular] = (counts[r.titular]||0)+1;
+  /* 1) aulas por professor: titular x substituto */
+  const porProf = {};
+  rows.forEach(r => {
+    if(r.titular) (porProf[r.titular] = porProf[r.titular] || {t:0,s:0}).t++;
+    if(r.substituto) (porProf[r.substituto] = porProf[r.substituto] || {t:0,s:0}).s++;
   });
-  const labels = Object.keys(counts);
-  const data = Object.values(counts);
-
-  if(labels.length === 0){
-    chartMensagem('wrapProf', state.escala.length === 0
-      ? 'Nenhuma aula cadastrada ainda. Gere o rodízio na aba Escala Mensal para o gráfico aparecer.'
-      : 'Nenhuma aula está marcada como “Realizada” ainda. Este gráfico conta só as aulas já realizadas — marque-as na coluna Status da Escala Mensal, ou espere as datas passarem.');
-    chartProf = null;
-  } else {
-    const ctx1 = chartCanvas('wrapProf', 'chartProf');
-    if(chartProf) chartProf.destroy();
-    chartProf = new Chart(ctx1, {
-      type: 'bar',
-      data: { labels, datasets: [{ label:'Aulas como titular', data, backgroundColor:'#0B5394' }] },
-      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} }
+  const nomes = Object.keys(porProf).sort((a,b) => (porProf[b].t + porProf[b].s) - (porProf[a].t + porProf[a].s) || a.localeCompare(b));
+  limpar('prof');
+  if(nomes.length){
+    chartProf = new Chart(chartCanvas('wrapProf', 'chartProf'), {
+      type:'bar',
+      data:{ labels:nomes, datasets:[
+        {label:'Titular', data:nomes.map(n => porProf[n].t), backgroundColor:COR.laranja, borderRadius:4},
+        {label:'Substituto', data:nomes.map(n => porProf[n].s), backgroundColor:COR.azul, borderRadius:4}
+      ]},
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom'}},
+        scales:{x:{beginAtZero:true, ticks:{precision:0}}, y:{grid:{display:false}}} }
     });
-  }
+  } else chartMensagem('wrapProf', 'Nenhum professor definido nas aulas deste período.');
 
-  const c25 = state.escala.filter(r=>r.classe==='Classe 2-5').length;
-  const c611 = state.escala.filter(r=>r.classe==='Classe 6-11').length;
-  if(c25 + c611 === 0){
-    chartMensagem('wrapClasse', 'Nenhuma aula cadastrada ainda.');
-    chartClasse = null;
-  } else {
-    const ctx2 = chartCanvas('wrapClasse', 'chartClasse');
-    if(chartClasse) chartClasse.destroy();
-    chartClasse = new Chart(ctx2, {
-      type:'doughnut',
-      data:{ labels:['Classe 2-5','Classe 6-11'], datasets:[{ data:[c25,c611], backgroundColor:['#B45F06','#0B5394'] }] },
-      options:{ responsive:true, maintainAspectRatio:false }
-    });
-  }
+  /* 2) aulas ao longo do tempo (por semana ou por mês), realizadas x a realizar */
+  const dias = Math.round((parseISO(iv.ate) - parseISO(iv.de)) / 86400000) + 1;
+  const porSemana = dias <= 70;
+  const chaveDe = (iso) => porSemana ? isoLocal(inicioSemana(parseISO(iso))) : iso.slice(0, 7);
+  const baldes = {};
+  rows.forEach(r => {
+    const k = chaveDe(r.data);
+    const b = baldes[k] = baldes[k] || {real:0, pend:0};
+    if(statusOf(r) === 'Realizada') b.real++; else b.pend++;
+  });
+  const chaves = Object.keys(baldes).sort();
+  const rotulo = (k) => porSemana ? fmtDate(k).slice(0, 5) : visaoNomeMes(k + '-01');
+  limpar('evol');
+  chartEvol = new Chart(chartCanvas('wrapEvol', 'chartEvol'), {
+    type:'bar',
+    data:{ labels:chaves.map(rotulo), datasets:[
+      {label:'Realizadas', data:chaves.map(k => baldes[k].real), backgroundColor:COR.verde, borderRadius:4},
+      {label:'A realizar', data:chaves.map(k => baldes[k].pend), backgroundColor:COR.amarelo, borderRadius:4}
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom'}, title:{display:true, text: porSemana ? 'Semanas (início no domingo)' : 'Meses', font:{size:11, weight:'normal'}}},
+      scales:{x:{stacked:true, grid:{display:false}}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}} }
+  });
+
+  /* 3) aulas por classe */
+  const porClasse = {};
+  rows.forEach(r => { porClasse[r.classe] = (porClasse[r.classe] || 0) + 1; });
+  const classes = Object.keys(porClasse).sort();
+  const coresClasse = [COR.laranja, COR.azul, COR.verde, COR.amarelo, COR.cinza];
+  limpar('classe');
+  chartClasse = new Chart(chartCanvas('wrapClasse', 'chartClasse'), {
+    type:'doughnut',
+    data:{ labels:classes, datasets:[{ data:classes.map(c => porClasse[c]), backgroundColor:classes.map((c,i) => coresClasse[i % coresClasse.length]), borderWidth:2, borderColor:'#fff' }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{legend:{position:'bottom'}} }
+  });
+
+  /* 4) situação das aulas: sem titular tem prioridade sobre o status */
+  const semTitular = rows.filter(r => !r.titular).length;
+  const real = rows.filter(r => r.titular && statusOf(r) === 'Realizada').length;
+  const pend = rows.filter(r => r.titular && statusOf(r) === 'A Realizar').length;
+  limpar('sit');
+  chartSit = new Chart(chartCanvas('wrapSit', 'chartSit'), {
+    type:'doughnut',
+    data:{ labels:['Realizadas','A realizar','Sem titular'], datasets:[{ data:[real, pend, semTitular], backgroundColor:[COR.verde, COR.amarelo, '#C0392B'], borderWidth:2, borderColor:'#fff' }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{legend:{position:'bottom'}} }
+  });
 }
 
 function existsRow(classe, iso){
@@ -2752,7 +2898,7 @@ function renderAll(){
   renderRealizadas();
   renderProf();
   renderKpisAbas();
-  if(document.getElementById('panel-visao').classList.contains('active')) renderCharts();
+  if(document.getElementById('panel-visao').classList.contains('active')) renderVisao();
 }
 
 document.getElementById('todayLabel').textContent = todayMidnight().toLocaleDateString('pt-BR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
