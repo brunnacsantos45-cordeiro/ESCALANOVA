@@ -8,12 +8,15 @@ import { spawnSync } from 'node:child_process';
 const token = randomBytes(16).toString('hex');
 const PORTA = 4789;
 
+// Grava em Production e em Preview (todas as branches), para o login valer nos dois.
 function vercelEnv(nome, valor) {
-  spawnSync('npx', ['vercel', 'env', 'rm', nome, 'production', '--yes'], { shell: true, stdio: 'ignore' });
-  const r = spawnSync('npx', ['vercel', 'env', 'add', nome, 'production', '--sensitive'], {
-    shell: true, input: valor, stdio: ['pipe', 'ignore', 'inherit'],
+  return ['production', 'preview'].every((amb) => {
+    spawnSync('npx', ['vercel', 'env', 'rm', nome, amb, '--yes'], { shell: true, stdio: 'ignore' });
+    const r = spawnSync('npx', ['vercel', 'env', 'add', nome, amb, '--sensitive'], {
+      shell: true, input: valor, stdio: ['pipe', 'ignore', 'inherit'],
+    });
+    return r.status === 0;
   });
-  return r.status === 0;
 }
 
 const pagina = `<!DOCTYPE html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
