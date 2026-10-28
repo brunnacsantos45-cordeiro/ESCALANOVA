@@ -1,7 +1,7 @@
 /* Service worker do IBK Escalas.
    Guarda os arquivos do app para funcionar sem internet.
    Ao publicar uma versão nova, troque o número do CACHE. */
-const CACHE = 'ibk-escalas-v15';
+const CACHE = 'ibk-escalas-v16';
 
 const ARQUIVOS = [
   './',
@@ -32,17 +32,17 @@ self.addEventListener('activate', evt => {
 
 self.addEventListener('fetch', evt => {
   if(evt.request.method !== 'GET') return;
+  const url = new URL(evt.request.url);
+  // login e logout sempre vão à rede (nunca do cache): a proteção do app depende disso
+  if(url.origin === location.origin && (url.pathname.startsWith('/api/') || url.pathname === '/login.html')) return;
+  // rede primeiro: o servidor confere o login; o cache só serve se estiver sem internet
   evt.respondWith(
-    caches.match(evt.request).then(cached => {
-      // responde do cache na hora e atualiza em segundo plano
-      const rede = fetch(evt.request).then(resp => {
-        if(resp && resp.status === 200){
-          const copia = resp.clone();
-          caches.open(CACHE).then(c => c.put(evt.request, copia));
-        }
-        return resp;
-      }).catch(() => cached);
-      return cached || rede;
-    })
+    fetch(evt.request).then(resp => {
+      if(resp && resp.status === 200 && !resp.redirected){
+        const copia = resp.clone();
+        caches.open(CACHE).then(c => c.put(evt.request, copia));
+      }
+      return resp;
+    }).catch(() => caches.match(evt.request))
   );
 });
