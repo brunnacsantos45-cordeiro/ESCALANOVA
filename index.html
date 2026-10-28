@@ -264,6 +264,24 @@
   #panel-prof .tbcard .note{text-align:center;}
   #panel-prof .toolbar{justify-content:center;}
 
+  /* ---------- Relatório: janela de opções ---------- */
+  .modal{position:fixed;inset:0;z-index:200;background:rgba(32,36,46,.55);display:flex;align-items:center;justify-content:center;padding:16px;}
+  .modal[hidden]{display:none !important;}
+  .modal-card{background:var(--card);border-radius:var(--radius-card);box-shadow:0 20px 50px rgba(0,0,0,.25);padding:22px 24px;width:100%;max-width:440px;}
+  .modal-card h3{margin:0 0 4px;font-size:18px;color:var(--ink);}
+  .modal-card .sub{margin:0 0 14px;font-size:13px;color:var(--muted);}
+  .modal-card label{display:block;margin:12px 0 4px;font-size:13px;font-weight:600;}
+  .modal-card select,.modal-card input[type=date]{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:13px;background:#fff;}
+  #relCustom{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+  #relCustom label{margin:0;font-weight:500;font-size:12px;color:var(--muted);}
+  .relresumo{margin:16px 0 4px;padding:10px 12px;border-radius:10px;background:var(--green-l);color:var(--green-d);font-size:13px;font-weight:600;}
+  .relresumo.erro{background:var(--yellow-l);color:var(--yellow-d);}
+  .relrasc{margin:8px 0 0;padding:8px 12px;border-radius:10px;background:var(--blue-l);color:var(--blue-d);font-size:12px;}
+  .modal-acoes{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap;}
+  .modal-acoes button:disabled{opacity:.55;cursor:default;}
+  .modal-nota{margin:10px 0 0;font-size:12px;color:var(--muted);}
+  @media print{ .modal{display:none !important;} }
+
   /* ---------- Início: agenda dos próximos 21 dias ---------- */
   [hidden]{display:none !important;}
   .avatar.av{width:24px;height:24px;font-size:10px;background:var(--orange-l);color:var(--orange-dd);}
@@ -542,10 +560,7 @@
     <div id="genPreviewWrap"></div>
     <div class="toolbar" style="border-top:1px dashed var(--line);padding-top:12px">
       <span style="font-size:13px">Escala para enviar aos professores:</span>
-      <label style="font-size:13px">De <input type="date" id="pdfDe"></label>
-      <label style="font-size:13px">até <input type="date" id="pdfAte"></label>
-      <button class="primary" onclick="gerarPDF()">Baixar PDF do período</button>
-      <span class="note" style="margin:0">Abre a impressão — escolha <strong>Salvar como PDF</strong>.</span>
+      <button class="primary" onclick="relatorioAbrir()">Relatório</button>
     </div>
     <div class="toolbar">
       <select id="filtroMesMensal" onchange="filtroMes = this.value; renderMensal()"></select>
@@ -648,6 +663,38 @@
       </div>
       <p id="syncStatus" class="syncstatus">Não conectado — os dados estão só neste aparelho.</p>
       <p class="note" style="margin-top:12px"><strong>Google Drive:</strong> o arquivo fica na sua conta e o app só enxerga o arquivo que ele mesmo criou. O login do Google vale cerca de uma hora — depois disso, toque em "Entrar com Google" novamente. Só funciona com o app publicado na internet (https), não abrindo o arquivo direto do aparelho.<br><strong>Banco compartilhado:</strong> não pede login, mas quem tiver o endereço e a chave consegue ver e editar a escala.</p>
+    </div>
+  </div>
+</div>
+
+<div id="relatorioModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="relTitulo" onclick="if(event.target===this) relatorioFechar()">
+  <div class="modal-card">
+    <h3 id="relTitulo">Relatório da escala</h3>
+    <p class="sub">Escolha a classe e o período. O relatório sai no modelo Koinonia Kids.</p>
+    <label for="relClasse">Classe</label>
+    <select id="relClasse" onchange="relatorioAtualizar()">
+      <option value="">Ambas as classes</option>
+      <option value="Classe 2-5">Somente Classe 2-5</option>
+      <option value="Classe 6-11">Somente Classe 6-11</option>
+    </select>
+    <label for="relPeriodo">Período</label>
+    <select id="relPeriodo" onchange="relatorioAtualizar()">
+      <option value="mes">Este mês</option>
+      <option value="prox">Próximo mês</option>
+      <option value="ant">Mês anterior</option>
+      <option value="tri">Últimos 3 meses</option>
+      <option value="custom">Personalizado</option>
+    </select>
+    <div id="relCustom" hidden>
+      <label>De <input type="date" id="relDe" onchange="relatorioAtualizar()"></label>
+      <label>Até <input type="date" id="relAte" onchange="relatorioAtualizar()"></label>
+    </div>
+    <div id="relResumo" class="relresumo"></div>
+    <div id="relRascunho" class="relrasc" hidden></div>
+    <p class="modal-nota">Abre a impressão do navegador: escolha <strong>Salvar como PDF</strong>.</p>
+    <div class="modal-acoes">
+      <button onclick="relatorioFechar()">Cancelar</button>
+      <button class="primary" id="relGerar" onclick="relatorioGerar()">Gerar relatório</button>
     </div>
   </div>
 </div>
@@ -3433,26 +3480,99 @@ const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho',
 
 const NOME_CLASSE_PDF = {'Classe 2-5':'CLASSE 2 a 5', 'Classe 6-11':'CLASSE 6 a 11'};
 
-function gerarPDF(){
-  const de = document.getElementById('pdfDe').value;
-  const ate = document.getElementById('pdfAte').value;
-  if(!de || !ate){ alert('Escolha a data inicial e a data final da escala.'); return; }
-  if(de > ate){ alert('A data inicial não pode ser depois da data final.'); return; }
-  const doMes = state.escala
-    .filter(r => r.data && r.data >= de && r.data <= ate)
+/* ---------- Relatório da escala (antigo "Baixar PDF do período") ---------- */
+function relatorioIntervalo(tipo){
+  const h = todayMidnight();
+  const y = h.getFullYear(), m = h.getMonth();
+  const fim = (ano, mes) => isoLocal(new Date(ano, mes + 1, 0));
+  if(tipo === 'mes') return {de: isoLocal(new Date(y, m, 1)), ate: fim(y, m)};
+  if(tipo === 'prox') return {de: isoLocal(new Date(y, m + 1, 1)), ate: fim(y, m + 1)};
+  if(tipo === 'ant') return {de: isoLocal(new Date(y, m - 1, 1)), ate: fim(y, m - 1)};
+  if(tipo === 'tri') return {de: isoLocal(new Date(y, m - 2, 1)), ate: fim(y, m)};
+  return {de: document.getElementById('relDe').value, ate: document.getElementById('relAte').value};
+}
+
+function relatorioAulas(){
+  const tipo = document.getElementById('relPeriodo').value;
+  const classe = document.getElementById('relClasse').value;
+  const iv = relatorioIntervalo(tipo);
+  const valido = !!iv.de && !!iv.ate && iv.de <= iv.ate;
+  const rows = valido
+    ? state.escala.filter(r => r.data && r.data >= iv.de && r.data <= iv.ate && (!classe || r.classe === classe))
+    : [];
+  return {iv, valido, classe, rows};
+}
+
+function relatorioAtualizar(){
+  const tipo = document.getElementById('relPeriodo').value;
+  const custom = document.getElementById('relCustom');
+  if(custom) custom.hidden = tipo !== 'custom';
+  if(tipo === 'custom' && !document.getElementById('relDe').value){
+    const iv = relatorioIntervalo('mes');
+    document.getElementById('relDe').value = iv.de;
+    document.getElementById('relAte').value = iv.ate;
+  }
+  const {iv, valido, rows} = relatorioAulas();
+  const resumo = document.getElementById('relResumo');
+  const btn = document.getElementById('relGerar');
+  if(!valido){
+    resumo.textContent = 'Escolha a data inicial e a data final (a inicial não pode ser depois da final).';
+    resumo.className = 'relresumo erro';
+  } else if(!rows.length){
+    resumo.textContent = 'Nenhuma aula entre ' + fmtDate(iv.de) + ' e ' + fmtDate(iv.ate) + ' com esse filtro. Gere o rodízio desse período antes.';
+    resumo.className = 'relresumo erro';
+  } else {
+    resumo.textContent = rows.length + (rows.length === 1 ? ' aula' : ' aulas') + ' · ' + fmtDate(iv.de) + ' a ' + fmtDate(iv.ate);
+    resumo.className = 'relresumo';
+  }
+  if(btn) btn.disabled = !valido || !rows.length;
+  const rasc = document.getElementById('relRascunho');
+  if(rasc){
+    const n = mContagem();
+    rasc.hidden = n === 0;
+    rasc.textContent = n ? 'Há ' + n + ' edição(ões) não salva(s) na Escala Mensal. O relatório usa só o que está salvo.' : '';
+  }
+}
+
+function relatorioAbrir(){
+  document.getElementById('relClasse').value = '';
+  document.getElementById('relPeriodo').value = 'mes';
+  document.getElementById('relDe').value = '';
+  document.getElementById('relAte').value = '';
+  document.getElementById('relatorioModal').hidden = false;
+  relatorioAtualizar();
+  document.getElementById('relGerar').focus();
+}
+
+function relatorioFechar(){
+  document.getElementById('relatorioModal').hidden = true;
+}
+
+document.addEventListener('keydown', e => {
+  const m = document.getElementById('relatorioModal');
+  if(e.key === 'Escape' && m && !m.hidden) relatorioFechar();
+});
+
+function relatorioGerar(){
+  const {iv, valido, classe, rows} = relatorioAulas();
+  if(!valido || !rows.length) return;
+  relatorioFechar();
+  gerarRelatorio(iv.de, iv.ate, classe);
+}
+
+// Mesma folha Koinonia Kids de antes; agora filtrada por classe e período.
+function gerarRelatorio(de, ate, classeFiltro){
+  const doPeriodo = state.escala
+    .filter(r => r.data && r.data >= de && r.data <= ate && (!classeFiltro || r.classe === classeFiltro))
     .slice()
     .sort((a,b) => a.data.localeCompare(b.data));
+  if(doPeriodo.length === 0) return;
 
-  if(doMes.length === 0){
-    alert(`Não há aulas cadastradas de ${fmtDate(de)} a ${fmtDate(ate)}. Gere o rodízio desse período antes.`);
-    return;
-  }
-
-  const classes = ['Classe 2-5','Classe 6-11'].filter(c => doMes.some(r => r.classe===c));
+  const classes = ['Classe 2-5','Classe 6-11'].filter(c => doPeriodo.some(r => r.classe===c));
   let html = '';
 
   classes.forEach(classe => {
-    const rows = doMes.filter(r => r.classe===classe);
+    const rows = doPeriodo.filter(r => r.classe===classe);
     html += `<div class="folha">
       <div class="faixa">
         <img class="esq" src="${LOGO_KOINONIA}" alt="">
@@ -3502,14 +3622,6 @@ function renderAll(){
 
 document.getElementById('todayLabel').textContent = todayMidnight().toLocaleDateString('pt-BR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
 document.getElementById('genMonth').value = new Date().toISOString().slice(0,7);
-(function(){
-  // padrão: do primeiro ao último dia do mês atual
-  const hoje = todayMidnight();
-  const pad = n => String(n).padStart(2,'0');
-  const y = hoje.getFullYear(), m = hoje.getMonth() + 1;
-  document.getElementById('pdfDe').value = `${y}-${pad(m)}-01`;
-  document.getElementById('pdfAte').value = `${y}-${pad(m)}-${pad(new Date(y, m, 0).getDate())}`;
-})();
 decorarAbas();
 tabInit();
 toggleSidebar(sidebarEstadoInicial());
