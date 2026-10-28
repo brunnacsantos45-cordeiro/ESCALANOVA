@@ -218,7 +218,7 @@
   .dash h3 a{font-size:12px;font-weight:500;color:var(--blue-d);cursor:pointer;text-decoration:none;}
   .dash h3 a:hover{text-decoration:underline;}
   .d-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);padding:16px 18px;box-shadow:var(--shadow-card);min-width:0;}
-  .d-hero{grid-column:span 8;color:#fff;border-radius:var(--radius-card);padding:20px 22px;box-shadow:var(--shadow-card);
+  .d-hero{grid-column:span 12;color:#fff;border-radius:var(--radius-card);padding:20px 22px;box-shadow:var(--shadow-card);
     background:linear-gradient(135deg,var(--orange-d) 0%,var(--orange-dd) 60%,#C85A00 100%);position:relative;overflow:hidden;}
   .d-hero::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.10);}
   .d-hero .tag{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;opacity:.9;}
@@ -236,8 +236,6 @@
   .d-hero .acoes{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:1;}
   .d-hero .acoes button{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.45);color:#fff;font-size:12px;}
   .d-hero .acoes button:hover{background:#fff;color:var(--orange-dd);border-color:#fff;}
-  .d-prog{grid-column:span 4;display:flex;flex-direction:column;}
-  .d-prog .ringbox{display:flex;align-items:center;gap:18px;flex:1;}
   .ring{width:112px;height:112px;flex:0 0 auto;}
   .ring .trilho{stroke:var(--line);} .ring .valor{stroke:var(--green-d);transition:stroke-dasharray .6s ease;}
   .ring text{font-family:inherit;fill:var(--ink);}
@@ -281,7 +279,7 @@
   .dombox .dd{font-weight:600;margin-bottom:4px;} .dombox .lb{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-top:6px;}
   .dombox .vz{color:var(--yellow-d);}
   @media (max-width:1000px){
-    .d-hero,.d-prog,.d-week,.d-alert,.d-next,.d-load{grid-column:span 12;}
+    .d-hero,.d-week,.d-alert,.d-next,.d-load{grid-column:span 12;}
     .d-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
     .domgrid{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
@@ -429,7 +427,6 @@
   <div class="panel active" id="panel-dashboard">
     <div class="dash">
       <section class="d-hero" id="dHero"></section>
-      <section class="d-card d-prog" id="dProg"></section>
       <section class="d-kpis" id="dKpis"></section>
       <section class="d-card d-week">
         <h3>Aulas desta semana <a onclick="irParaAba('mensal')">Escala mensal →</a></h3>
@@ -1163,28 +1160,6 @@ function renderCards(){
       <div class="acoes"><button onclick="irParaAba('mensal')">Ir para a escala mensal</button></div>`;
   }
   document.getElementById('dHero').innerHTML = hero;
-
-  /* --- progresso do mês (anel) --- */
-  const total = doMes.length;
-  const pct = total ? Math.round(realMes / total * 100) : 0;
-  const R = 46, C = 2 * Math.PI * R;
-  const nomeMes = capitalize(hoje.toLocaleDateString('pt-BR', {month:'long', year:'numeric'}));
-  document.getElementById('dProg').innerHTML = `
-    <h3>${escHtml(nomeMes)}</h3>
-    <div class="ringbox">
-      <svg class="ring" viewBox="0 0 112 112" role="img" aria-label="${pct}% das aulas do mês realizadas">
-        <circle class="trilho" cx="56" cy="56" r="${R}" fill="none" stroke-width="11"/>
-        <circle class="valor" cx="56" cy="56" r="${R}" fill="none" stroke-width="11" stroke-linecap="round"
-          stroke-dasharray="${(C*pct/100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 56 56)"/>
-        <text x="56" y="54" text-anchor="middle" font-size="22" font-weight="700">${pct}%</text>
-        <text x="56" y="71" text-anchor="middle" font-size="10" style="fill:var(--muted)">realizadas</text>
-      </svg>
-      <div class="legenda">
-        <div><i style="background:var(--green-d)"></i>Realizadas<b>${realMes}</b></div>
-        <div><i style="background:var(--yellow-d)"></i>A realizar<b>${pendMes}</b></div>
-        <div><i style="background:#C9C6BA"></i>Total no mês<b>${total}</b></div>
-      </div>
-    </div>`;
 
   /* --- indicadores --- */
   const ic = {
