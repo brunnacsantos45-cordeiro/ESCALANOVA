@@ -400,6 +400,7 @@
       <div class="syncform" style="grid-template-columns:1fr">
         <label>Método
           <select id="syncMetodo" onchange="syncTrocarMetodo()">
+            <option value="nuvem">Banco do site — todos os aparelhos logados (recomendado)</option>
             <option value="drive">Google Drive — só eu, em vários aparelhos</option>
             <option value="supabase">Banco compartilhado — várias pessoas editando</option>
           </select>
@@ -1752,6 +1753,12 @@ function syncCarregarCfg(){
     const bruto = localStorage.getItem(SYNC_CFG);
     if(bruto) syncCfg = JSON.parse(bruto);
   }catch(err){ syncCfg = null; }
+  // Publicado no site com login (https), a sincronização com o banco do site liga sozinha.
+  let nuvemDesligada = false;
+  try{ nuvemDesligada = localStorage.getItem('ibk_nuvem_off') === '1'; }catch(err){}
+  if(!syncCfg && !nuvemDesligada && /^https:$/.test(location.protocol) && !/github\.io$/.test(location.hostname)){
+    syncCfg = {metodo:'nuvem'};
+  }
   if(!syncCfg) { syncTrocarMetodo(); return; }
   const sel = document.getElementById('syncMetodo');
   if(sel) sel.value = syncCfg.metodo || 'supabase';
@@ -1762,6 +1769,9 @@ function syncCarregarCfg(){
   syncIniciarLoop();
   if(syncCfg.metodo === 'drive'){
     syncMsg('Conectado ao Google Drive. Toque em "Entrar com Google" para liberar o acesso desta sessão.', 'ok');
+  } else if(syncCfg.metodo === 'nuvem'){
+    syncMsg('Conectado ao banco do site. Buscando dados…', 'ok');
+    syncPuxar(true);
   } else {
     syncMsg('Conectado ao grupo "' + syncCfg.sala + '". Buscando dados…', 'ok');
     syncPuxar(true);
@@ -1814,6 +1824,15 @@ function sincronizarAgoraHeader(){
 
 function syncConectar(){
   const metodo = syncMetodoAtual();
+  if(metodo === 'nuvem'){
+    try{ localStorage.removeItem('ibk_nuvem_off'); }catch(err){}
+    syncCfg = {metodo:'nuvem'};
+    syncCarimbo = null;
+    syncMsg('Conectando ao banco do site…');
+    syncIniciarLoop();
+    syncPuxar(true);
+    return;
+  }
   if(metodo === 'drive'){
     const clientId = (document.getElementById('syncClientId').value || '').trim();
     if(!clientId.endsWith('.apps.googleusercontent.com')){
@@ -1848,7 +1867,7 @@ function syncConectar(){
 function syncDesconectar(){
   if(!confirm('Desconectar este aparelho? Os dados continuam salvos aqui, mas param de sincronizar com os outros.')) return;
   syncCfg = null; syncCarimbo = null; driveToken = null; driveTokenAte = 0;
-  try{ localStorage.removeItem(SYNC_CFG); }catch(err){}
+  try{ localStorage.removeItem(SYNC_CFG); localStorage.setItem('ibk_nuvem_off', '1'); }catch(err){}
   if(syncTimer){ clearInterval(syncTimer); syncTimer = null; }
   syncMsg('Não conectado — os dados estão só neste aparelho.');
   marcarSalvo('Salvo no aparelho');
@@ -1880,11 +1899,13 @@ function syncIniciarLoop(){
 
 function syncPuxar(inicial){
   if(!syncCfg || syncOcupado) return Promise.resolve();
+  if(syncCfg.metodo === 'nuvem') return nuvemPuxar(inicial);
   return syncCfg.metodo === 'drive' ? drivePuxar(inicial) : supaPuxar(inicial);
 }
 
 function syncEnviar(){
   if(!syncCfg || syncOcupado) return Promise.resolve();
+  if(syncCfg.metodo === 'nuvem') return nuvemEnviar();
   return syncCfg.metodo === 'drive' ? driveEnviar() : supaEnviar();
 }
 
@@ -1958,6 +1979,56 @@ function syncQuando(iso){
     if(diff < 3600) return 'há ' + Math.round(diff/60) + ' min';
     return d.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
   }catch(err){ return ''; }
+}
+
+/* ---------- Banco do próprio site (Postgres na Vercel) ----------
+   Usa a sessão de login do site (cookie): não precisa de chave nem de configuração.
+   O servidor é a fonte única; todos os aparelhos logados leem e gravam o mesmo estado. */
+
+function nuvemStatus(resp){
+  if(resp.status === 401){ location.href = '/login.html'; throw new Error('login-site'); }
+  if(!resp.ok) throw new Error('http');
+  return resp;
+}
+
+function nuvemPuxar(inicial){
+  syncOcupado = true;
+  return fetch('/api/state', {credentials: 'same-origin', cache: 'no-store'})
+    .then(nuvemStatus)
+    .then(resp => resp.json())
+    .then(remoto => {
+      syncOcupado = false;
+      if(!remoto.dados){
+        if(inicial){ syncMsg('Banco vazio — enviando os dados deste aparelho.', 'ok'); return syncEnviar(); }
+        return;
+      }
+      if(remoto.atualizado_em === syncCarimbo){
+        syncMsg('Tudo sincronizado · última alteração ' + syncQuando(syncCarimbo) + '.', 'ok');
+        return;
+      }
+      if(syncPendente && !inicial) return syncEnviar();
+      syncAplicarRemoto(remoto.dados, remoto.atualizado_em, 'do banco');
+    })
+    .catch(err => { syncOcupado = false; if(err.message !== 'login-site') syncErro(err); });
+}
+
+function nuvemEnviar(){
+  syncOcupado = true;
+  return fetch('/api/state', {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({dados: state})
+  })
+    .then(nuvemStatus)
+    .then(resp => resp.json())
+    .then(r => {
+      syncCarimbo = r.atualizado_em;
+      syncPendente = false;
+      syncOcupado = false;
+      syncMsg('Enviado — os outros aparelhos recebem em poucos segundos.', 'ok');
+    })
+    .catch(err => { syncOcupado = false; if(err.message !== 'login-site') syncErro(err); });
 }
 
 /* ---------- Supabase ---------- */

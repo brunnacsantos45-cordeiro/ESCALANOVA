@@ -2,11 +2,14 @@
   "name": "escalanova",
   "private": true,
   "type": "module",
-  "engines": { "node": "22.x" },
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "set-password": "node scripts/set-password.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "@vercel/functions": "^2.0.0"
   }
 }
