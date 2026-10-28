@@ -1142,15 +1142,18 @@ function textoQuando(n){
 }
 
 /* ---------- Atenção: análise por aula, borda nos campos e atalho para corrigir ---------- */
-function limiteAtencaoISO(){
-  return isoLocal(new Date(todayMidnight().getTime() + 30*86400000));
+function mesAtualISO(){
+  return isoLocal(todayMidnight()).slice(0,7);
+}
+function noMesAtual(iso){
+  return !!iso && iso.slice(0,7) === mesAtualISO();
 }
 
-// Problemas de uma aula (mesmos critérios do quadro Atenção): campo, nível e texto.
+// Problemas de uma aula do mês atual (mesmos critérios do quadro Atenção): campo, nível e texto.
 function analisarAula(r){
   const p = [];
   if(!r.data){ p.push({campo:'data', nivel:'aviso', txt:'Aula sem data'}); return p; }
-  if(statusOf(r) !== 'A Realizar' || r.data > limiteAtencaoISO()) return p;
+  if(statusOf(r) !== 'A Realizar' || !noMesAtual(r.data)) return p;
   if(!r.titular) p.push({campo:'titular', nivel:'erro', txt:'Sem titular'});
   else if(!profByName(r.classe, r.titular).nome) p.push({campo:'titular', nivel:'aviso', txt:r.titular + ' não está no cadastro'});
   if(!r.substituto) p.push({campo:'substituto', nivel:'aviso', txt:'Sem substituto'});
@@ -1187,16 +1190,16 @@ function celAlerta(r, campo){
 function profInativoEmUso(p){
   if(p.ativo !== false) return false;
   return state.escala.some(r => r.titular === p.nome && r.classe === p.classe
-    && statusOf(r) === 'A Realizar' && r.data <= limiteAtencaoISO());
+    && statusOf(r) === 'A Realizar' && noMesAtual(r.data));
 }
 
 let alertasAtuais = [];
 
 function dashAlertas(proximas, doMes, hojeISO){
   const lista = [];
-  const proximos30 = proximas.filter(r => r.data <= limiteAtencaoISO());
+  const aFazerNoMes = proximas.filter(r => noMesAtual(r.data));
 
-  proximos30.forEach(r => {
+  aFazerNoMes.forEach(r => {
     const rot = fmtDate(r.data) + ' · ' + r.classe;
     const linha = state.escala.indexOf(r);
     analisarAula(r).forEach(pb => {
@@ -1209,11 +1212,11 @@ function dashAlertas(proximas, doMes, hojeISO){
     }
   });
 
-  // domingos com aula nos próximos 30 dias e sem ajudante definido
-  const doms = [...new Set(proximos30.filter(r => ehDomingo(r.data)).map(r => r.data))];
+  // domingos com aula neste mês e sem ajudante definido
+  const doms = [...new Set(aFazerNoMes.filter(r => ehDomingo(r.data)).map(r => r.data))];
   doms.forEach(d => {
     if(!dominicalDe(d).ajudante){
-      const ref = proximos30.find(r => r.data === d);
+      const ref = aFazerNoMes.find(r => r.data === d);
       lista.push({nivel:'info', aba:'mensal', linha:state.escala.indexOf(ref), campo:'ajudante', txt:'Domingo sem ajudante', det:fmtDate(d)});
     }
   });
@@ -1315,7 +1318,7 @@ function renderCards(){
   document.getElementById('dAlertas').innerHTML = alertasAtuais.length
     ? alertasAtuais.slice(0, MAX).map((a, n) => `<div class="alerta ${a.nivel}" onclick="irParaAlerta(${n})" title="Clique para ir direto ao ponto a corrigir"><span class="pt"></span><div>${escHtml(a.txt)}<small>${escHtml(a.det)}</small><span class="ir">Corrigir →</span></div></div>`).join('')
       + (alertasAtuais.length > MAX ? `<p class="note" style="margin:8px 0 0">+ ${alertasAtuais.length - MAX} outro(s) aviso(s)</p>` : '')
-    : '<div class="alerta ok"><span class="pt"></span><div>Tudo em ordem nos próximos 30 dias.</div></div>';
+    : '<div class="alerta ok"><span class="pt"></span><div>Tudo em ordem neste mês.</div></div>';
 
   /* --- agenda dos próximos 21 dias --- */
   document.getElementById('dProximas').innerHTML = dashAgendaHtml(proximas, hoje);
