@@ -1,40 +1,18 @@
-import { neon } from '@neondatabase/serverless';
-import { COOKIE, lerCookie, tokenValido } from '../lib/session.js';
+import { db } from '../lib/db.js';
+import { usuarioDaRequisicao } from '../lib/auth.js';
 
-// Estado do app (professores, escalas...) guardado no Postgres e compartilhado por todos os
-// aparelhos logados. O middleware já exige login; aqui conferimos de novo (defesa em profundidade).
-// A coluna "grupo" permite, no futuro, separar dados por usuário/equipe sem mudar a estrutura.
+// Estado do app (professores, escalas...) compartilhado por todos os logins ativos.
+// O middleware já exige sessão; aqui conferimos de novo no banco (usuário ativo).
+// "grupo" permite, no futuro, separar os dados por equipe sem mudar a estrutura.
 const GRUPO = 'ibk-kids';
 const LIMITE_BYTES = 2_000_000;
 
-let sql;
-let tabelaPronta = false;
-
-async function preparar() {
-  sql ??= neon(process.env.DATABASE_URL);
-  if (tabelaPronta) return;
-  await sql`CREATE TABLE IF NOT EXISTS app_state (
-    grupo text PRIMARY KEY,
-    dados jsonb NOT NULL,
-    atualizado_em timestamptz NOT NULL DEFAULT now(),
-    atualizado_por text
-  )`;
-  tabelaPronta = true;
-}
-
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  const email = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-  const token = lerCookie(req.headers.cookie, COOKIE);
-  if (!(await tokenValido(token, email, process.env.SESSION_SECRET))) {
-    return res.status(401).json({ erro: 'Não autenticado.' });
-  }
-  if (!process.env.DATABASE_URL) {
-    return res.status(503).json({ erro: 'Banco de dados não configurado.' });
-  }
-
   try {
-    await preparar();
+    const usuario = await usuarioDaRequisicao(req);
+    if (!usuario) return res.status(401).json({ erro: 'Não autenticado.' });
+    const sql = await db();
 
     if (req.method === 'GET') {
       const linhas = await sql`SELECT dados, atualizado_em FROM app_state WHERE grupo = ${GRUPO}`;
@@ -54,7 +32,7 @@ export default async function handler(req, res) {
       if (texto.length > LIMITE_BYTES) return res.status(413).json({ erro: 'Dados grandes demais.' });
       const linhas = await sql`
         INSERT INTO app_state (grupo, dados, atualizado_em, atualizado_por)
-        VALUES (${GRUPO}, ${texto}::jsonb, now(), ${email})
+        VALUES (${GRUPO}, ${texto}::jsonb, now(), ${usuario.email})
         ON CONFLICT (grupo) DO UPDATE
           SET dados = EXCLUDED.dados, atualizado_em = now(), atualizado_por = EXCLUDED.atualizado_por
         RETURNING atualizado_em`;

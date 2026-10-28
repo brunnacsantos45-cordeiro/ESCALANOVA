@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Minha conta — IBK KIDS Escalas</title>
+<style>
+  :root{--orange:#FF7A00;--orange-d:#E56800;--ink:#2B2A27;--muted:#75736B;--line:#E9E6DE;--page:#F7F6F2;--card:#fff;--ok:#1E7A38;--erro:#B3261E;}
+  *{box-sizing:border-box}
+  body{margin:0;padding:16px;background:var(--page);color:var(--ink);font-family:'Poppins','Segoe UI',Arial,sans-serif}
+  main{max-width:760px;margin:0 auto}
+  a.voltar{display:inline-block;margin:4px 0 12px;color:var(--orange-d);text-decoration:none;font-weight:600;font-size:14px}
+  section{background:var(--card);border-radius:16px;padding:22px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(30,20,10,.04),0 6px 18px rgba(30,20,10,.06)}
+  h1{margin:0 0 4px;font-size:20px} h2{margin:0 0 12px;font-size:16px}
+  p{margin:0 0 12px;color:var(--muted);font-size:14px}
+  label{display:block;margin:10px 0 4px;font-size:13px;font-weight:600}
+  input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff}
+  input:focus,select:focus{outline:2px solid var(--orange);outline-offset:1px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px} @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  button{padding:10px 14px;border:0;border-radius:10px;background:var(--orange);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+  button:hover{background:var(--orange-d)} button:disabled{opacity:.6;cursor:wait}
+  button.sec{background:#fff;color:var(--ink);border:1px solid var(--line)} button.sec:hover{background:var(--page)}
+  .msg{min-height:20px;margin-top:10px;font-size:13px} .msg.ok{color:var(--ok)} .msg.erro{color:var(--erro)}
+  .user{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 0;border-top:1px solid var(--line)}
+  .user .info{flex:1 1 220px;min-width:0} .user .info b{display:block;overflow-wrap:anywhere}
+  .user .info span{font-size:12px;color:var(--muted)}
+  .tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;background:#FFE8D1;color:#9A6400;margin-left:6px}
+  .tag.off{background:#eee;color:#666}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <a class="voltar" href="/">← Voltar ao app</a>
+
+  <section>
+    <h1>Minha conta</h1>
+    <p id="quem">Carregando…</p>
+    <h2>Trocar minha senha</h2>
+    <form id="fSenha">
+      <label for="atual">Senha atual</label>
+      <input id="atual" type="password" autocomplete="current-password" required>
+      <div class="grid">
+        <div><label for="nova">Nova senha (mín. 10 caracteres)</label>
+          <input id="nova" type="password" minlength="10" autocomplete="new-password" required></div>
+        <div><label for="nova2">Repita a nova senha</label>
+          <input id="nova2" type="password" minlength="10" autocomplete="new-password" required></div>
+      </div>
+      <p style="margin-top:10px">Depois de trocar, você precisará entrar de novo em todos os aparelhos.</p>
+      <button type="submit">Trocar senha</button>
+      <div class="msg" id="mSenha" role="status"></div>
+    </form>
+  </section>
+
+  <section id="admin" hidden>
+    <h2>Contas com acesso</h2>
+    <p>Todas as contas ativas veem e editam os mesmos dados. Desativar uma conta encerra o acesso dela na hora, sem apagar nada.</p>
+    <div id="lista"></div>
+
+    <h2 style="margin-top:22px">Criar nova conta</h2>
+    <form id="fNova">
+      <div class="grid">
+        <div><label for="nNome">Nome</label><input id="nNome" type="text" maxlength="80" autocomplete="off"></div>
+        <div><label for="nEmail">E-mail (será o login)</label><input id="nEmail" type="email" autocomplete="off" required></div>
+        <div><label for="nSenha">Senha inicial (mín. 10 caracteres)</label><input id="nSenha" type="password" minlength="10" autocomplete="new-password" required></div>
+        <div><label for="nPapel">Tipo de acesso</label>
+          <select id="nPapel"><option value="membro">Membro (usa o app)</option><option value="admin">Administrador (também gerencia contas)</option></select></div>
+      </div>
+      <button type="submit" style="margin-top:14px">Criar conta</button>
+      <div class="msg" id="mNova" role="status"></div>
+    </form>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+function msg(el, texto, tipo){ el.textContent = texto; el.className = 'msg' + (tipo ? ' ' + tipo : ''); }
+async function api(url, metodo, corpo){
+  const r = await fetch(url, {method: metodo, headers: {'Content-Type': 'application/json'},
+    body: corpo ? JSON.stringify(corpo) : undefined, credentials: 'same-origin'});
+  if(r.status === 401 && url !== '/api/senha'){ location.href = '/login.html'; throw new Error('login'); }
+  const d = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error(d.erro || 'Erro inesperado.');
+  return d;
+}
+
+$('fSenha').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if($('nova').value !== $('nova2').value){ msg($('mSenha'), 'As senhas novas não conferem.', 'erro'); return; }
+  try{
+    await api('/api/senha', 'POST', {atual: $('atual').value, nova: $('nova').value});
+    msg($('mSenha'), 'Senha trocada. Redirecionando para o login…', 'ok');
+    setTimeout(() => location.href = '/login.html', 1200);
+  }catch(err){ msg($('mSenha'), err.message, 'erro'); }
+});
+
+function linha(u, euId){
+  const d = document.createElement('div'); d.className = 'user';
+  const info = document.createElement('div'); info.className = 'info';
+  const nome = document.createElement('b'); nome.textContent = u.nome || u.email;
+  const tag = document.createElement('span'); tag.className = 'tag' + (u.ativo ? '' : ' off');
+  tag.textContent = (u.papel === 'admin' ? 'admin' : 'membro') + (u.ativo ? '' : ' · desativada');
+  nome.appendChild(tag);
+  const mail = document.createElement('span'); mail.textContent = u.email;
+  info.append(nome, mail);
+  const bSenha = document.createElement('button'); bSenha.className = 'sec'; bSenha.textContent = 'Redefinir senha';
+  bSenha.onclick = async () => {
+    const s = prompt('Nova senha para ' + u.email + ' (mín. 10 caracteres):');
+    if(s === null) return;
+    try{ await api('/api/usuarios', 'PATCH', {id: u.id, senha: s}); alert('Senha redefinida. A pessoa precisa entrar de novo.'); }
+    catch(err){ alert(err.message); }
+  };
+  d.append(info, bSenha);
+  if(u.id !== euId){
+    const bAtivo = document.createElement('button'); bAtivo.className = 'sec';
+    bAtivo.textContent = u.ativo ? 'Desativar' : 'Reativar';
+    bAtivo.onclick = async () => {
+      if(u.ativo && !confirm('Desativar ' + u.email + '? O acesso é encerrado na hora.')) return;
+      try{ await api('/api/usuarios', 'PATCH', {id: u.id, ativo: !u.ativo}); carregarLista(); }
+      catch(err){ alert(err.message); }
+    };
+    d.append(bAtivo);
+  }
+  return d;
+}
+
+async function carregarLista(){
+  const d = await api('/api/usuarios', 'GET');
+  $('lista').replaceChildren(...d.usuarios.map((u) => linha(u, d.eu)));
+}
+
+$('fNova').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try{
+    await api('/api/usuarios', 'POST', {nome: $('nNome').value, email: $('nEmail').value, senha: $('nSenha').value, papel: $('nPapel').value});
+    msg($('mNova'), 'Conta criada. Passe o e-mail e a senha inicial para a pessoa.', 'ok');
+    $('fNova').reset(); carregarLista();
+  }catch(err){ msg($('mNova'), err.message, 'erro'); }
+});
+
+(async () => {
+  try{
+    const eu = await api('/api/me', 'GET');
+    $('quem').textContent = 'Você está logado como ' + eu.email + (eu.papel === 'admin' ? ' (administrador).' : '.');
+    if(eu.papel === 'admin'){ $('admin').hidden = false; carregarLista(); }
+  }catch(err){ /* api() já redireciona para o login se a sessão acabou */ }
+})();
+</script>
+</body>
+</html>
