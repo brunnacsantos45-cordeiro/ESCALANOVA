@@ -1995,7 +1995,7 @@ let nuvemRev = 0;       // versão do banco em que este aparelho se baseou
 let syncBase = null;     // cópia do último estado sincronizado (base da mesclagem)
 
 function nuvemStatus(resp){
-  if(resp.status === 401){ location.href = '/login.html'; throw new Error('login-site'); }
+  if(resp.status === 401 || (resp.redirected && /login\.html/.test(resp.url))){ location.href = '/login.html'; throw new Error('login-site'); }
   if(!resp.ok) throw new Error('http');
   return resp;
 }
@@ -2051,12 +2051,12 @@ function nuvemPuxar(inicial){
         return;
       }
       if(remoto.rev === nuvemRev){
-        syncMsg('Tudo sincronizado · última alteração ' + syncQuando(syncCarimbo) + '.', 'ok');
+        syncMsg('Tudo sincronizado · última alteração ' + syncQuando(syncCarimbo) + (remoto.por ? ' por ' + remoto.por : '') + '.', 'ok');
         return;
       }
       if(syncPendente && !inicial){ nuvemMesclar(remoto); return syncEnviar(); }
       nuvemAplicar(nuvemNormalizar(remoto.dados), remoto.rev, remoto.atualizado_em,
-        'Atualizado com a versão do banco (' + syncQuando(remoto.atualizado_em) + ').');
+        'Atualizado com a versão do banco (' + syncQuando(remoto.atualizado_em) + (remoto.por ? ' · por ' + remoto.por : '') + ').');
     })
     .catch(err => { syncOcupado = false; if(err.message !== 'login-site') syncErro(err); });
 }

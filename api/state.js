@@ -19,11 +19,12 @@ export default async function handler(req, res) {
     const usuario = await usuarioDaRequisicao(req);
     if (!usuario) return res.status(401).json({ erro: 'Não autenticado.' });
     const sql = await db();
+    const quem = usuario.nome || usuario.email; // aparece para os outros aparelhos como "última alteração por"
 
     if (req.method === 'GET') {
-      const [l] = await sql`SELECT dados, rev, atualizado_em FROM app_state WHERE grupo = ${GRUPO}`;
+      const [l] = await sql`SELECT dados, rev, atualizado_em, atualizado_por FROM app_state WHERE grupo = ${GRUPO}`;
       if (!l) return res.status(200).json({ dados: null, rev: 0, atualizado_em: null });
-      return res.status(200).json({ dados: l.dados, rev: l.rev, atualizado_em: iso(l.atualizado_em) });
+      return res.status(200).json({ dados: l.dados, rev: l.rev, atualizado_em: iso(l.atualizado_em), por: l.atualizado_por });
     }
 
     if (req.method === 'PUT') {
@@ -40,24 +41,25 @@ export default async function handler(req, res) {
         // primeira gravação: só entra se ainda não existe linha
         gravado = await sql`
           INSERT INTO app_state (grupo, dados, atualizado_em, atualizado_por, rev)
-          VALUES (${GRUPO}, ${texto}::jsonb, now(), ${usuario.email}, 1)
+          VALUES (${GRUPO}, ${texto}::jsonb, now(), ${quem}, 1)
           ON CONFLICT (grupo) DO NOTHING
           RETURNING rev, atualizado_em`;
       } else {
         // só atualiza se ninguém gravou depois da versão em que o app se baseou
         gravado = await sql`
           UPDATE app_state
-             SET dados = ${texto}::jsonb, atualizado_em = now(), atualizado_por = ${usuario.email}, rev = rev + 1
+             SET dados = ${texto}::jsonb, atualizado_em = now(), atualizado_por = ${quem}, rev = rev + 1
            WHERE grupo = ${GRUPO} AND rev = ${rev}
           RETURNING rev, atualizado_em`;
       }
       if (gravado.length === 0) {
-        const [atual] = await sql`SELECT dados, rev, atualizado_em FROM app_state WHERE grupo = ${GRUPO}`;
+        const [atual] = await sql`SELECT dados, rev, atualizado_em, atualizado_por FROM app_state WHERE grupo = ${GRUPO}`;
         return res.status(409).json({
           conflito: true,
           dados: atual?.dados ?? null,
           rev: atual?.rev ?? 0,
           atualizado_em: atual ? iso(atual.atualizado_em) : null,
+          por: atual?.atualizado_por ?? null,
         });
       }
       return res.status(200).json({ ok: true, rev: gravado[0].rev, atualizado_em: iso(gravado[0].atualizado_em) });

@@ -10,6 +10,14 @@ export const config = {
 
 export default async function middleware(request) {
   const sessao = await lerToken(lerCookie(request.headers.get('cookie'), COOKIE), process.env.SESSION_SECRET);
-  if (!sessao) return Response.redirect(new URL('/login.html', request.url), 302);
+  if (!sessao) {
+    // chamadas da API recebem 401 (o app volta ao login); páginas são redirecionadas
+    if (new URL(request.url).pathname.startsWith('/api/')) {
+      return new Response(JSON.stringify({ erro: 'Não autenticado.' }), {
+        status: 401, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return Response.redirect(new URL('/login.html', request.url), 302);
+  }
   return next();
 }
