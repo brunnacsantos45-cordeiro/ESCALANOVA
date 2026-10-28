@@ -188,31 +188,10 @@
   }
   @media (max-width:720px){ .syncform{grid-template-columns:1fr;} .syncactions button{flex:1 1 46%;} }
   .panel{display:none;}
-  /* ---------- Início: seletor de estilo e estilos 2 e 3 ---------- */
+  /* ---------- Início: agenda dos próximos 21 dias ---------- */
   [hidden]{display:none !important;}
-  .layoutbar{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:12px;font-size:12px;color:var(--muted);flex-wrap:wrap;}
-  #layoutSeg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px;}
-  #layoutSeg button{border:none;background:transparent;border-radius:8px;padding:6px 12px;font-size:12px;color:var(--muted);}
-  #layoutSeg button:hover{color:var(--orange-dd);}
-  #layoutSeg button.on{background:var(--orange-d);color:#fff;font-weight:600;}
   .avatar.av{width:24px;height:24px;font-size:10px;background:var(--orange-l);color:var(--orange-dd);}
   .avatar.av.sub{background:var(--blue-l);color:var(--blue-d);}
-
-  /* Estilo 2 — Agenda */
-  .b-faixa{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--orange-l);border:1px solid #F7CFA3;border-radius:var(--radius-card);padding:12px 16px;margin-bottom:16px;}
-  .b-quando{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
-  .b-quando .tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--orange-dd);}
-  .b-quando b{font-size:20px;color:var(--ink);} .b-quando span:last-child{font-size:13px;color:var(--muted);}
-  .b-resumo{display:flex;gap:8px;flex-wrap:wrap;flex:1;min-width:0;}
-  .b-chip{background:#fff;border-radius:20px;padding:5px 12px;font-size:12px;border:1px solid #F7CFA3;}
-  .b-btn{background:var(--orange-d);border-color:var(--orange-d);color:#fff;}
-  .b-btn:hover{background:var(--orange-dd);border-color:var(--orange-dd);color:#fff;}
-  .b-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:16px;}
-  .b-cols{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start;}
-  .b-lado{display:grid;gap:16px;} .b-lado .d-card h3,.b-cols>.d-card h3{margin-bottom:12px;}
-  .b-lado,.b-cols .d-card{min-width:0;}
-  .b-lado h3,.b-cols h3{font-size:14px;font-weight:600;margin:0;display:flex;justify-content:space-between;}
-  .b-cols h3 a{font-size:12px;font-weight:500;color:var(--blue-d);cursor:pointer;}
   .b-dia{display:grid;grid-template-columns:62px 18px 1fr;gap:6px;}
   .b-data{text-align:center;padding-top:2px;} .b-data b{display:block;font-size:24px;line-height:1;color:var(--ink);}
   .b-data span{font-size:11px;text-transform:uppercase;font-weight:600;color:var(--orange-dd);letter-spacing:.05em;}
@@ -226,45 +205,7 @@
   .aulamini .pp{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:5px;font-size:13px;}
   .aulamini .pp span{display:inline-flex;align-items:center;gap:7px;}
   .aulamini .pp .sb{color:var(--muted);} .aulamini .tm{font-size:12px;color:var(--muted);margin-top:4px;}
-  .dom2{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
-
-  /* Estilo 3 — Calendário */
-  .c-pilulas{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px;}
-  .c-pilula{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 14px;box-shadow:var(--shadow-card);}
-  .c-pilula b{display:block;font-size:22px;line-height:1.15;} .c-pilula span{font-size:12px;color:var(--muted);}
-  .c-pilula.warn{background:var(--yellow-l);border-color:#F2D9A6;} .c-pilula.warn b{color:var(--yellow-d);}
-  .c-pilula .mini{height:6px;border-radius:99px;background:#F0EEE7;margin-top:6px;overflow:hidden;}
-  .c-pilula .mini i{display:block;height:100%;background:var(--green-d);border-radius:99px;}
-  .c-main{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:16px;align-items:start;}
-  .c-lado{display:grid;gap:16px;min-width:0;} .c-lado h3,.c-det h3{font-size:14px;font-weight:600;margin:0 0 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .cal-topo{display:flex;align-items:center;gap:8px;margin-bottom:12px;} .cal-topo strong{flex:1;font-size:16px;text-align:center;}
-  .cal-topo button{padding:6px 12px;font-size:15px;line-height:1;} .cal-topo .cal-hoje{font-size:12px;}
-  .cal-grade{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;}
-  .cal-h{text-align:center;font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:600;padding:4px 0;}
-  .cal-d{min-height:78px;border:1px solid var(--line);border-radius:10px;padding:5px;cursor:pointer;background:#fff;display:flex;flex-direction:column;gap:3px;overflow:hidden;}
-  .cal-d:hover{border-color:var(--orange-d);} .cal-d.fora{background:#FAF9F5;opacity:.55;}
-  .cal-d .n{font-size:12px;font-weight:600;} .cal-d.hoje .n{background:var(--orange-d);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;}
-  .cal-d.sel{outline:2px solid var(--blue-d);outline-offset:-1px;background:var(--blue-l);}
-  .cal-ev{display:block;font-size:10px;padding:2px 5px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
-  .cal-ev.c1{background:var(--orange-l);color:var(--orange-dd);} .cal-ev.c2{background:var(--blue-l);color:var(--blue-d);} .cal-ev.c3{background:#EEE;color:#555;}
-  .cal-ev.feito{opacity:.55;text-decoration:line-through;} .cal-mais{font-size:10px;color:var(--muted);}
-  .cal-leg{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--muted);}
-  .cal-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;} .cal-leg i.c1{background:var(--orange-d);} .cal-leg i.c2{background:var(--blue-d);} .cal-leg i.feito{background:#ccc;}
-  .det-aula{border:1px solid var(--line);border-left:4px solid var(--orange-d);border-radius:10px;padding:10px 12px;margin-bottom:10px;}
-  .det-aula.c2{border-left-color:var(--blue-d);} .det-aula .cl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center;gap:8px;}
-  .det-aula .pessoas{display:grid;gap:6px;margin-top:8px;font-size:13px;} .det-aula .pessoas span{display:flex;align-items:center;gap:8px;}
-  .det-aula .tm{font-size:12px;color:var(--muted);margin-top:6px;}
-  .det-dom{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px;}
-  .det-dom .lb{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;} .det-dom .vz{color:var(--yellow-d);}
-  @media (max-width:1000px){
-    .b-cols,.c-main{grid-template-columns:minmax(0,1fr);}
-    .b-kpis{grid-template-columns:repeat(2,minmax(0,1fr));} .c-pilulas{grid-template-columns:repeat(2,minmax(0,1fr));}
-  }
-  @media (max-width:560px){
-    .cal-d{min-height:54px;padding:3px;} .cal-ev{font-size:0;padding:0;height:6px;width:100%;}
-    .cal-h{font-size:10px;} .b-dia{grid-template-columns:50px 14px 1fr;}
-    .layoutbar{justify-content:space-between;}
-  }
+  @media (max-width:560px){ .b-dia{grid-template-columns:50px 14px 1fr;} }
 
   /* ---------- Layout estilo dashboard ---------- */
   header.top{
@@ -313,6 +254,7 @@
   .kpi .num{font-size:26px;font-weight:700;line-height:1.1;}
   .kpi .rot{font-size:12px;color:var(--muted);}
   .kpi .sub2{font-size:11px;color:var(--muted);margin-top:1px;}
+  .d-week,.d-alert,.d-next,.d-load{align-self:start;}
   .d-week{grid-column:span 8;} .d-alert{grid-column:span 4;}
   .d-next{grid-column:span 8;} .d-load{grid-column:span 4;} .d-dom{grid-column:span 12;}
   .d-week .weekrow{padding:10px 2px;}
@@ -485,8 +427,6 @@
   </header>
 
   <div class="panel active" id="panel-dashboard">
-    <div class="layoutbar"><span>Estilo do Início:</span>
-      <div id="layoutSeg"><button data-v="1" onclick="setLayoutInicio('1')">1 · Cards</button><button data-v="2" onclick="setLayoutInicio('2')">2 · Agenda</button><button data-v="3" onclick="setLayoutInicio('3')">3 · Calendário</button></div></div>
     <div class="dash">
       <section class="d-hero" id="dHero"></section>
       <section class="d-card d-prog" id="dProg"></section>
@@ -500,7 +440,7 @@
         <div id="dAlertas"></div>
       </section>
       <section class="d-card d-next">
-        <h3>Próximas aulas <a onclick="irParaAba('arealizar')">Ver todas →</a></h3>
+        <h3>Agenda · próximos 21 dias <a onclick="irParaAba('arealizar')">Ver todas →</a></h3>
         <div id="dProximas"></div>
       </section>
       <section class="d-card d-load">
@@ -512,8 +452,6 @@
         <div class="domgrid" id="dDomingos"></div>
       </section>
     </div>
-    <div id="dashB" class="dashB" hidden></div>
-    <div id="dashC" class="dashC" hidden></div>
   </div>
 
   <div class="panel" id="panel-mensal">
@@ -1182,7 +1120,7 @@ function dashAlertas(proximas, doMes, hojeISO){
   return lista;
 }
 
-function renderDashA(){
+function renderCards(){
   const hoje = todayMidnight();
   const hojeISO = isoLocal(hoje);
   const proximas = state.escala.filter(r => statusOf(r)==='A Realizar').slice().sort((a,b)=>a.data.localeCompare(b.data));
@@ -1269,20 +1207,8 @@ function renderDashA(){
       + (alertas.length > MAX ? `<p class="note" style="margin:8px 0 0">+ ${alertas.length - MAX} outro(s) aviso(s)</p>` : '')
     : '<div class="alerta ok"><span class="pt"></span><div>Tudo em ordem nos próximos 30 dias.</div></div>';
 
-  /* --- próximas aulas (depois da primeira data) --- */
-  const dia0 = proximas.length ? proximas[0].data : null;
-  const seguintes = proximas.filter(r => r.data !== dia0).slice(0, 6);
-  document.getElementById('dProximas').innerHTML = seguintes.length
-    ? seguintes.map(r => {
-        const dt = parseISO(r.data);
-        return `<div class="proxrow">
-          <div class="datachip"><b>${String(dt.getDate()).padStart(2,'0')}</b><span>${escHtml(dt.toLocaleDateString('pt-BR',{month:'short'}).replace('.',''))}</span></div>
-          <div class="quem"><strong>${escHtml(r.classe)}</strong> · ${escHtml(capitalize(diaSemana(r.data)))}
-            <small>Titular: ${escHtml(r.titular)||'—'}${r.substituto ? ' · Subst.: ' + escHtml(r.substituto) : ''}${r.tema ? ' · ' + escHtml(r.tema) : ''}</small></div>
-          <span class="badge pend">${escHtml(textoQuando(diasAte(r.data)))}</span>
-        </div>`;
-      }).join('')
-    : '<p class="empty">Sem outras aulas agendadas à frente.</p>';
+  /* --- agenda dos próximos 21 dias --- */
+  document.getElementById('dProximas').innerHTML = dashAgendaHtml(proximas, hoje);
 
   /* --- rodízio do mês: titulares e substitutos por professor --- */
   const carga = {};
@@ -1311,90 +1237,7 @@ function renderDashA(){
   }).join('');
 }
 
-/* ---------- Início: 3 estilos (1 Cards · 2 Agenda · 3 Calendário) ---------- */
-let layoutInicio = (function(){
-  try{ const v = localStorage.getItem('ibk_inicio_layout'); return ['1','2','3'].includes(v) ? v : '1'; }
-  catch(err){ return '1'; }
-})();
-
-function setLayoutInicio(v){
-  layoutInicio = v;
-  try{ localStorage.setItem('ibk_inicio_layout', v); }catch(err){}
-  renderCards();
-}
-
-const DASH_IC = {
-  cal:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>',
-  clock:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
-  send:'<svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
-  users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="8" r="2.5"/><path d="M16 14.6c2.6.5 4 2.2 4 5.4"/></svg>'
-};
-
-function dashDados(){
-  const hoje = todayMidnight();
-  const hojeISO = isoLocal(hoje);
-  const proximas = state.escala.filter(r => statusOf(r)==='A Realizar').slice().sort((a,b)=>a.data.localeCompare(b.data));
-  const ym = hojeISO.slice(0,7);
-  const doMes = state.escala.filter(r => (r.data||'').slice(0,7)===ym);
-  const ini = inicioSemana(hoje);
-  const fimSem = new Date(ini); fimSem.setDate(fimSem.getDate()+6);
-  const daSemana = state.escala.filter(r => r.data && r.data >= isoLocal(ini) && r.data <= isoLocal(fimSem));
-  return {
-    hoje, hojeISO, proximas, doMes,
-    realMes: doMes.filter(r=>statusOf(r)==='Realizada').length,
-    pendMes: doMes.filter(r=>statusOf(r)==='A Realizar').length,
-    ativos: state.professores.filter(p=>p.ativo).length,
-    porEnviar: doMes.filter(r => !r.enviada).length,
-    daSemana,
-    semanaPend: daSemana.filter(r => statusOf(r)==='A Realizar').length
-  };
-}
-
-function dashKpisHtml(d){
-  return `
-    <div class="kpi"><div class="ico o">${DASH_IC.cal}</div><div><div class="num">${d.daSemana.length}</div><div class="rot">Aulas esta semana</div><div class="sub2">${d.semanaPend} ainda a realizar</div></div></div>
-    <div class="kpi"><div class="ico b">${DASH_IC.clock}</div><div><div class="num">${d.pendMes}</div><div class="rot">A realizar no mês</div><div class="sub2">${d.proximas.length} no total à frente</div></div></div>
-    <div class="kpi"><div class="ico ${d.porEnviar ? 'y' : 'g'}">${DASH_IC.send}</div><div><div class="num">${d.porEnviar}</div><div class="rot">Escalas por enviar</div><div class="sub2">${d.porEnviar ? 'aulas do mês' : 'tudo enviado'}</div></div></div>
-    <div class="kpi"><div class="ico g">${DASH_IC.users}</div><div><div class="num">${d.ativos}</div><div class="rot">Professores ativos</div><div class="sub2">de ${state.professores.length} cadastrados</div></div></div>`;
-}
-
-function dashAlertasHtml(d){
-  const alertas = dashAlertas(d.proximas, d.doMes, d.hojeISO);
-  const MAX = 6;
-  return alertas.length
-    ? alertas.slice(0, MAX).map(a => `<div class="alerta ${a.nivel}" onclick="irParaAba('${a.aba}')"><span class="pt"></span><div>${escHtml(a.txt)}<small>${escHtml(a.det)}</small></div></div>`).join('')
-      + (alertas.length > MAX ? `<p class="note" style="margin:8px 0 0">+ ${alertas.length - MAX} outro(s) aviso(s)</p>` : '')
-    : '<div class="alerta ok"><span class="pt"></span><div>Tudo em ordem nos próximos 30 dias.</div></div>';
-}
-
-function dashCargaHtml(d){
-  const carga = {};
-  d.doMes.forEach(r => {
-    if(r.titular){ (carga[r.titular] = carga[r.titular] || {t:0,s:0}).t++; }
-    if(r.substituto){ (carga[r.substituto] = carga[r.substituto] || {t:0,s:0}).s++; }
-  });
-  const nomes = Object.keys(carga).sort((a,b) => (carga[b].t - carga[a].t) || (carga[b].s - carga[a].s) || a.localeCompare(b));
-  const maxT = Math.max(1, ...nomes.map(n => carga[n].t));
-  return nomes.length
-    ? nomes.slice(0, 8).map(n => `<div class="barra"><span class="nm" title="${escAttr(n)}">${escHtml(n)}</span>
-        <span class="tr"><i style="width:${Math.round(carga[n].t / maxT * 100)}%"></i></span>
-        <span class="ct">${carga[n].t} tit. · ${carga[n].s} sub.</span></div>`).join('')
-    : '<p class="empty">Sem aulas neste mês.</p>';
-}
-
-function dashDomingosHtml(d, n){
-  const doms = [];
-  const d0 = new Date(d.hoje); d0.setDate(d0.getDate() + ((7 - d0.getDay()) % 7));
-  for(let i = 0; i < n; i++){ const x = new Date(d0); x.setDate(x.getDate() + 7*i); doms.push(isoLocal(x)); }
-  return doms.map(iso => {
-    const x = dominicalDe(iso);
-    const temAula = state.escala.some(r => r.data === iso);
-    return `<div class="dombox"><div class="dd">${fmtDate(iso)}${temAula ? '' : ' <span style="font-weight:400;color:var(--muted)">· sem aula</span>'}</div>
-      <div class="lb">EBD</div><div>${x.ebd ? escHtml(x.ebd) : '<span class="vz">não definido</span>'}</div>
-      <div class="lb">Ajudante</div><div>${x.ajudante ? escHtml(x.ajudante) : '<span class="vz">não definido</span>'}</div></div>`;
-  }).join('');
-}
-
+/* ---------- Início: agenda dos próximos 21 dias ---------- */
 function aulaMiniHtml(r){
   return `<div class="aulamini">
     <span class="cls">${escHtml(r.classe)}</span>
@@ -1404,143 +1247,20 @@ function aulaMiniHtml(r){
   </div>`;
 }
 
-/* ===== Estilo 2 — Agenda: faixa da próxima aula, indicadores e linha do tempo ===== */
-function renderDashB(){
-  const d = dashDados();
-  const prox = d.proximas[0];
-  let faixa;
-  if(prox){
-    const doDia = d.proximas.filter(r => r.data === prox.data);
-    faixa = `<div class="b-quando"><span class="tag">Próxima aula</span><b>${escHtml(textoQuando(diasAte(prox.data)))}</b><span>${escHtml(capitalize(diaSemana(prox.data)))}, ${fmtDate(prox.data)}</span></div>
-      <div class="b-resumo">${doDia.map(r => `<span class="b-chip"><strong>${escHtml(r.classe)}</strong> · ${escHtml(r.titular)||'—'}${r.substituto ? ' / ' + escHtml(r.substituto) : ''}</span>`).join('')}</div>`;
-  } else {
-    faixa = `<div class="b-quando"><span class="tag">Próxima aula</span><b>Nenhuma aula agendada</b></div>
-      <div class="b-resumo"><span class="b-chip">Gere a escala do próximo mês na aba Escala Mensal.</span></div>`;
-  }
-
-  const limite = isoLocal(new Date(d.hoje.getTime() + 21*86400000));
+function dashAgendaHtml(proximas, hoje){
+  const limite = isoLocal(new Date(hoje.getTime() + 21*86400000));
   const porDia = {};
-  d.proximas.filter(r => r.data <= limite).forEach(r => (porDia[r.data] = porDia[r.data] || []).push(r));
+  proximas.filter(r => r.data <= limite).forEach(r => (porDia[r.data] = porDia[r.data] || []).push(r));
   const dias = Object.keys(porDia).sort().slice(0, 8);
-  const agenda = dias.length ? dias.map(iso => {
-    const dt = parseISO(iso), n = diasAte(iso);
+  if(!dias.length) return '<p class="empty">Nenhuma aula nos próximos 21 dias.</p>';
+  return dias.map(iso => {
+    const dt = parseISO(iso);
     return `<div class="b-dia">
-      <div class="b-data"><b>${String(dt.getDate()).padStart(2,'0')}</b><span>${escHtml(dt.toLocaleDateString('pt-BR',{month:'short'}).replace('.',''))}</span><small>${escHtml(textoQuando(n))}</small></div>
+      <div class="b-data"><b>${String(dt.getDate()).padStart(2,'0')}</b><span>${escHtml(dt.toLocaleDateString('pt-BR',{month:'short'}).replace('.',''))}</span><small>${escHtml(textoQuando(diasAte(iso)))}</small></div>
       <div class="b-linha"><i></i></div>
       <div class="b-aulas"><div class="b-semana">${escHtml(capitalize(diaSemana(iso)))}</div>${porDia[iso].map(aulaMiniHtml).join('')}</div>
     </div>`;
-  }).join('') : '<p class="empty">Nenhuma aula nos próximos 21 dias.</p>';
-
-  document.getElementById('dashB').innerHTML = `
-    <div class="b-faixa">${faixa}<button class="b-btn" onclick="irParaAba('mensal')">Escala mensal →</button></div>
-    <div class="b-kpis">${dashKpisHtml(d)}</div>
-    <div class="b-cols">
-      <section class="d-card"><h3>Agenda · próximos 21 dias <a onclick="irParaAba('arealizar')">Ver todas →</a></h3><div class="b-agenda">${agenda}</div></section>
-      <div class="b-lado">
-        <section class="d-card"><h3>Atenção</h3>${dashAlertasHtml(d)}</section>
-        <section class="d-card"><h3>Rodízio no mês</h3>${dashCargaHtml(d)}</section>
-        <section class="d-card"><h3>Próximos domingos</h3><div class="domgrid dom2">${dashDomingosHtml(d, 2)}</div></section>
-      </div>
-    </div>`;
-}
-
-/* ===== Estilo 3 — Calendário do mês com detalhe do dia ===== */
-let calMes = null;
-let calSel = null;
-
-function calMover(n){
-  calMes = new Date(calMes.getFullYear(), calMes.getMonth() + n, 1);
-  renderCards();
-}
-function calSelecionar(iso){ calSel = iso; renderCards(); }
-function calHoje(){
-  const h = todayMidnight();
-  calMes = new Date(h.getFullYear(), h.getMonth(), 1);
-  calSel = isoLocal(h);
-  renderCards();
-}
-
-function corClasse(classe){
-  return String(classe).includes('2-5') ? 'c1' : (String(classe).includes('6-11') ? 'c2' : 'c3');
-}
-
-function renderDashC(){
-  const d = dashDados();
-  if(!calMes){ calMes = new Date(d.hoje.getFullYear(), d.hoje.getMonth(), 1); }
-  if(!calSel){ calSel = d.proximas.length ? d.proximas[0].data : d.hojeISO; }
-
-  const porData = {};
-  state.escala.forEach(r => { if(r.data) (porData[r.data] = porData[r.data] || []).push(r); });
-  const inicio = new Date(calMes); inicio.setDate(1 - calMes.getDay());
-  const mesAtual = calMes.getMonth();
-  const cabecalho = ['dom','seg','ter','qua','qui','sex','sáb'].map(x => `<div class="cal-h">${x}</div>`).join('');
-  let celulas = '';
-  for(let i = 0; i < 42; i++){
-    const dt = new Date(inicio); dt.setDate(inicio.getDate() + i);
-    const iso = isoLocal(dt);
-    const aulas = porData[iso] || [];
-    const cls = ['cal-d', dt.getMonth() !== mesAtual ? 'fora' : '', iso === d.hojeISO ? 'hoje' : '', iso === calSel ? 'sel' : ''].join(' ');
-    celulas += `<div class="${cls}" onclick="calSelecionar('${iso}')">
-      <span class="n">${dt.getDate()}</span>
-      ${aulas.slice(0, 3).map(r => `<span class="cal-ev ${corClasse(r.classe)} ${statusOf(r)==='Realizada' ? 'feito' : ''}" title="${escAttr(r.classe + ' — ' + (r.titular||'sem titular'))}">${escHtml((r.titular||'?').split(' ')[0])}</span>`).join('')}
-      ${aulas.length > 3 ? '<span class="cal-mais">+' + (aulas.length - 3) + '</span>' : ''}
-    </div>`;
-  }
-  const nomeMes = capitalize(calMes.toLocaleDateString('pt-BR', {month:'long', year:'numeric'}));
-
-  const doDia = porData[calSel] || [];
-  const nSel = diasAte(calSel);
-  const dom = ehDomingo(calSel) ? dominicalDe(calSel) : null;
-  const detalhe = `
-    <h3>${escHtml(capitalize(diaSemana(calSel)))}, ${fmtDate(calSel)} <span class="badge pend" style="font-weight:500">${escHtml(textoQuando(nSel))}</span></h3>
-    ${doDia.length ? doDia.map(r => `<div class="det-aula ${corClasse(r.classe)}">
-        <div class="cl">${escHtml(r.classe)} <span class="badge ${statusOf(r)==='Realizada' ? 'real' : 'pend'}">${statusOf(r)}</span></div>
-        <div class="pessoas"><span><i class="avatar av">${escHtml(iniciais(r.titular))}</i>Titular: <strong>${escHtml(r.titular)||'—'}</strong></span>
-          <span><i class="avatar av sub">${escHtml(iniciais(r.substituto))}</i>Substituto: <strong>${escHtml(r.substituto)||'—'}</strong></span></div>
-        ${r.tema ? '<div class="tm">Tema: ' + escHtml(r.tema) + '</div>' : ''}
-      </div>`).join('') : '<p class="empty">Nenhuma aula neste dia.</p>'}
-    ${dom ? `<div class="det-dom"><div><span class="lb">EBD</span> ${dom.ebd ? escHtml(dom.ebd) : '<span class="vz">não definido</span>'}</div><div><span class="lb">Ajudante</span> ${dom.ajudante ? escHtml(dom.ajudante) : '<span class="vz">não definido</span>'}</div></div>` : ''}`;
-
-  const pct = d.doMes.length ? Math.round(d.realMes / d.doMes.length * 100) : 0;
-  document.getElementById('dashC').innerHTML = `
-    <div class="c-pilulas">
-      <div class="c-pilula"><b>${d.daSemana.length}</b><span>aulas esta semana</span></div>
-      <div class="c-pilula"><b>${d.pendMes}</b><span>a realizar no mês</span></div>
-      <div class="c-pilula ${d.porEnviar ? 'warn' : ''}"><b>${d.porEnviar}</b><span>escalas por enviar</span></div>
-      <div class="c-pilula"><b>${d.ativos}</b><span>professores ativos</span></div>
-      <div class="c-pilula prog"><b>${pct}%</b><span>do mês realizado</span><div class="mini"><i style="width:${pct}%"></i></div></div>
-    </div>
-    <div class="c-main">
-      <section class="d-card c-cal">
-        <div class="cal-topo">
-          <button onclick="calMover(-1)" aria-label="Mês anterior">‹</button>
-          <strong>${escHtml(nomeMes)}</strong>
-          <button onclick="calMover(1)" aria-label="Próximo mês">›</button>
-          <button class="cal-hoje" onclick="calHoje()">Hoje</button>
-        </div>
-        <div class="cal-grade">${cabecalho}${celulas}</div>
-        <div class="cal-leg"><span><i class="c1"></i>Classe 2-5</span><span><i class="c2"></i>Classe 6-11</span><span><i class="feito"></i>Já realizada</span></div>
-      </section>
-      <div class="c-lado">
-        <section class="d-card c-det">${detalhe}</section>
-        <section class="d-card"><h3>Atenção</h3>${dashAlertasHtml(d)}</section>
-      </div>
-    </div>`;
-}
-
-/* despacho entre os estilos */
-function renderCards(){
-  const a = document.querySelector('#panel-dashboard .dash');
-  const b = document.getElementById('dashB');
-  const c = document.getElementById('dashC');
-  if(!a || !b || !c) return;
-  a.hidden = layoutInicio !== '1';
-  b.hidden = layoutInicio !== '2';
-  c.hidden = layoutInicio !== '3';
-  document.querySelectorAll('#layoutSeg button').forEach(bt => bt.classList.toggle('on', bt.dataset.v === layoutInicio));
-  if(layoutInicio === '1') renderDashA();
-  else if(layoutInicio === '2') renderDashB();
-  else renderDashC();
+  }).join('');
 }
 
 function chartMensagem(idWrap, texto){
