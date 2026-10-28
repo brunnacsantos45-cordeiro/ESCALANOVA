@@ -188,6 +188,25 @@
   }
   @media (max-width:720px){ .syncform{grid-template-columns:1fr;} .syncactions button{flex:1 1 46%;} }
   .panel{display:none;}
+  /* ---------- Demais abas no estilo dashboard ---------- */
+  .tabhead{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+  .tabhead .th-ico{width:46px;height:46px;border-radius:14px;background:var(--orange-l);color:var(--orange-dd);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .tabhead .th-ico svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+  .tabhead h2{margin:0;font-size:20px;color:var(--ink);} .tabhead p{margin:2px 0 0;font-size:13px;color:var(--muted);}
+  .tabkpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:16px;}
+  .tbcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:16px 18px;margin-bottom:16px;overflow-x:auto;}
+  .tbcard .toolbar{margin-bottom:12px;}
+  .tbcard .genbar{background:var(--orange-l);border:1px solid #F7CFA3;}
+  .tbcard table{border:1px solid var(--line);border-radius:12px;}
+  .tbcard thead th{padding:11px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;}
+  .tbcard tbody td{padding:9px 10px;}
+  .tbcard tbody tr:nth-child(even){background:#FCFBF8;}
+  .tbcard tbody tr:hover{background:#FFF6EC;}
+  .tbcard tbody tr:last-child td{border-bottom:none;}
+  .tbcard .note{margin:0 0 12px;}
+  @media (max-width:1000px){ .tabkpis{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  @media (max-width:480px){ .tabhead h2{font-size:17px;} .tabhead .th-ico{width:40px;height:40px;} .tbcard{padding:12px;} }
+
   /* ---------- Início: agenda dos próximos 21 dias ---------- */
   [hidden]{display:none !important;}
   .avatar.av{width:24px;height:24px;font-size:10px;background:var(--orange-l);color:var(--orange-dd);}
@@ -1240,6 +1259,98 @@ function dashAgendaHtml(proximas, hoje){
       <div class="b-aulas"><div class="b-semana">${escHtml(capitalize(diaSemana(iso)))}</div>${porDia[iso].map(aulaMiniHtml).join('')}</div>
     </div>`;
   }).join('');
+}
+
+/* ---------- Demais abas: cabeçalho, indicadores e cartão ---------- */
+const ICONES_ABAS = {
+  cal:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>',
+  clock:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  check:'<svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>',
+  send:'<svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
+  users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="8" r="2.5"/><path d="M16 14.6c2.6.5 4 2.2 4 5.4"/></svg>',
+  bars:'<svg viewBox="0 0 24 24"><line x1="5" y1="20" x2="5" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="14"/></svg>',
+  sync:'<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 01-15.3 6.4M3 12a9 9 0 0115.3-6.4"/><polyline points="21 3 21 9 15 9"/><polyline points="3 21 3 15 9 15"/></svg>',
+  alert:'<svg viewBox="0 0 24 24"><path d="M12 3l10 18H2L12 3z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="17.5" x2="12" y2="17.6"/></svg>'
+};
+
+const CABECALHOS_ABAS = {
+  mensal:     {ico:'cal',   titulo:'Escala Mensal',    sub:'Sorteie o rodízio, ajuste datas e acompanhe o envio das escalas.', cartao:true},
+  arealizar:  {ico:'clock', titulo:'Aulas a Realizar', sub:'Aulas de hoje em diante. Tema e observações são editáveis aqui mesmo.', cartao:true},
+  realizadas: {ico:'check', titulo:'Aulas Realizadas', sub:'Histórico gerado automaticamente a partir da Escala Mensal.', cartao:true},
+  prof:       {ico:'users', titulo:'Professores',      sub:'Cadastro, disponibilidade e limites do rodízio.', cartao:true},
+  visao:      {ico:'bars',  titulo:'Visão Geral',      sub:'Gráficos de rodízio e distribuição das aulas.', cartao:false},
+  sync:       {ico:'sync',  titulo:'Sincronização',    sub:'Mantenha todos os aparelhos com os mesmos dados.', cartao:false}
+};
+
+// Roda uma vez: põe título e indicadores no topo de cada aba e, nas abas de tabela,
+// move o conteúdo existente (sem recriar nada) para dentro de um cartão.
+function decorarAbas(){
+  Object.keys(CABECALHOS_ABAS).forEach(id => {
+    const painel = document.getElementById('panel-' + id);
+    if(!painel || painel.dataset.decorado) return;
+    const c = CABECALHOS_ABAS[id];
+    const filhos = Array.from(painel.children);
+    const topo = document.createElement('div');
+    topo.innerHTML = `<div class="tabhead"><div class="th-ico">${ICONES_ABAS[c.ico]}</div><div><h2>${c.titulo}</h2><p>${c.sub}</p></div></div>
+      ${id === 'sync' ? '' : '<div class="tabkpis" id="kpi-' + id + '"></div>'}`;
+    if(c.cartao){
+      const cartao = document.createElement('div');
+      cartao.className = 'tbcard';
+      filhos.forEach(f => cartao.appendChild(f));
+      painel.append(...topo.children, cartao);
+    } else {
+      painel.prepend(...topo.children);
+    }
+    painel.dataset.decorado = '1';
+  });
+}
+
+function kpiAba(cor, icone, num, rotulo, sub){
+  return `<div class="kpi"><div class="ico ${cor}">${ICONES_ABAS[icone]}</div><div><div class="num">${num}</div><div class="rot">${rotulo}</div><div class="sub2">${sub}</div></div></div>`;
+}
+
+function renderKpisAbas(){
+  const hoje = todayMidnight();
+  const hojeISO = isoLocal(hoje);
+  const ym = hojeISO.slice(0,7);
+  const todas = state.escala;
+  const doMes = todas.filter(r => (r.data||'').slice(0,7) === ym);
+  const aRealizar = todas.filter(r => statusOf(r) === 'A Realizar').slice().sort((a,b) => a.data.localeCompare(b.data));
+  const realizadas = todas.filter(r => statusOf(r) === 'Realizada').slice().sort((a,b) => b.data.localeCompare(a.data));
+  const ini = inicioSemana(hoje); const fim = new Date(ini); fim.setDate(fim.getDate() + 6);
+  const naSemana = aRealizar.filter(r => r.data >= isoLocal(ini) && r.data <= isoLocal(fim)).length;
+  const put = (id, html) => { const el = document.getElementById('kpi-' + id); if(el) el.innerHTML = html; };
+
+  put('mensal',
+    kpiAba('o','cal', todas.length, 'Aulas cadastradas', doMes.length + ' no mês atual') +
+    kpiAba('b','clock', doMes.filter(r => statusOf(r) === 'A Realizar').length, 'A realizar no mês', 'restantes') +
+    kpiAba(doMes.some(r => !r.enviada) ? 'y' : 'g','send', doMes.filter(r => !r.enviada).length, 'Escalas por enviar', 'aulas do mês') +
+    kpiAba(aRealizar.some(r => !r.titular) ? 'y' : 'g','alert', aRealizar.filter(r => !r.titular).length, 'Sem titular', 'entre as a realizar'));
+
+  put('arealizar',
+    kpiAba('o','clock', aRealizar.length, 'Aulas à frente', 'a partir de hoje') +
+    kpiAba('b','cal', naSemana, 'Nesta semana', 'domingo a sábado') +
+    kpiAba('g','check', aRealizar.length ? fmtDate(aRealizar[0].data) : '—', 'Próxima data', aRealizar.length ? textoQuando(diasAte(aRealizar[0].data)) : 'sem aulas') +
+    kpiAba(aRealizar.some(r => !r.substituto) ? 'y' : 'g','alert', aRealizar.filter(r => !r.substituto).length, 'Sem substituto', 'precisam de definição'));
+
+  put('realizadas',
+    kpiAba('g','check', realizadas.length, 'Aulas realizadas', 'no histórico') +
+    kpiAba('o','cal', doMes.filter(r => statusOf(r) === 'Realizada').length, 'Realizadas no mês', 'mês atual') +
+    kpiAba('b','clock', realizadas.length ? fmtDate(realizadas[0].data) : '—', 'Última aula', realizadas.length ? textoQuando(diasAte(realizadas[0].data)) : 'sem histórico') +
+    kpiAba('o','users', new Set(realizadas.map(r => r.titular).filter(Boolean)).size, 'Titulares diferentes', 'no histórico'));
+
+  const profs = state.professores;
+  put('prof',
+    kpiAba('g','users', profs.filter(p => p.ativo).length, 'Ativos', 'de ' + profs.length + ' cadastrados') +
+    kpiAba('y','users', profs.filter(p => !p.ativo).length, 'Inativos', 'fora do rodízio') +
+    kpiAba('b','users', profs.filter(p => p.reserva).length, 'Reservas', 'apoio quando falta alguém') +
+    kpiAba('o','cal', profs.filter(p => p.soDomingo).length, 'Só domingo', 'disponibilidade restrita'));
+
+  put('visao',
+    kpiAba('o','cal', todas.length, 'Total de aulas', 'no histórico') +
+    kpiAba('g','check', realizadas.length, 'Realizadas', 'até hoje') +
+    kpiAba('b','clock', aRealizar.length, 'A realizar', 'à frente') +
+    kpiAba('o','users', new Set(todas.map(r => r.titular).filter(Boolean)).size, 'Professores com aula', 'como titular'));
 }
 
 function chartMensagem(idWrap, texto){
@@ -2645,6 +2756,7 @@ function renderAll(){
   renderArealizar();
   renderRealizadas();
   renderProf();
+  renderKpisAbas();
   if(document.getElementById('panel-visao').classList.contains('active')) renderCharts();
 }
 
@@ -2658,6 +2770,7 @@ document.getElementById('genMonth').value = new Date().toISOString().slice(0,7);
   document.getElementById('pdfDe').value = `${y}-${pad(m)}-01`;
   document.getElementById('pdfAte').value = `${y}-${pad(m)}-${pad(new Date(y, m, 0).getDate())}`;
 })();
+decorarAbas();
 tabInit();
 toggleSidebar(sidebarEstadoInicial());
 document.getElementById('mainContent').addEventListener('click', () => {
