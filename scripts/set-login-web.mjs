@@ -40,6 +40,7 @@ f.onsubmit=async(ev)=>{ev.preventDefault();m.textContent='';
 
 const server = createServer((req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${PORTA}`);
+  console.log(`${new Date().toISOString()} ${req.method} ${url.pathname}`);
   if (url.searchParams.get('t') !== token) { res.writeHead(403).end('Acesso negado'); return; }
   if (req.method === 'GET') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(pagina); return; }
   let corpo = '';
@@ -57,7 +58,8 @@ const server = createServer((req, res) => {
     const ok = vercelEnv('ADMIN_EMAIL', email)
       && vercelEnv('ADMIN_PASSWORD_HASH', `scrypt$${salt.toString('hex')}$${hash.toString('hex')}`)
       && vercelEnv('SESSION_SECRET', randomBytes(32).toString('hex'));
-    responder(ok, ok ? 'Pronto! Login salvo. Pode fechar esta página.' : 'Falha ao gravar na Vercel. Veja o terminal.');
+    console.log(ok ? 'SALVO em production e preview' : 'FALHOU ao gravar');
+    responder(ok,ok ? 'Pronto! Login salvo. Pode fechar esta página.' : 'Falha ao gravar na Vercel. Veja o terminal.');
     if (ok) setTimeout(() => process.exit(0), 500);
   });
 });
